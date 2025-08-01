@@ -587,6 +587,8 @@ def create_loan_application(
 	loan_application.loan_product = loan_product
 	loan_application.posting_date = posting_date or nowdate()
 	loan_application.is_secured_loan = 1
+	loan_application.applicant_email_address = "lending@example.com"
+	loan_application.applicant_phone_number = "+91-9108273645"
 
 	if repayment_method:
 		loan_application.repayment_method = repayment_method
