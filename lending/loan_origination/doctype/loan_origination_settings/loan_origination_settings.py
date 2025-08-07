@@ -38,9 +38,7 @@ class LoanOriginationSettings(Document):
 			for field in set(fields).difference(set(fields_with_unique_constraints)):
 				frappe.db.add_unique("Customer", field)
 		else:
-			frappe.enqueue(
-				remove_unique_constraints, fields_with_unique_constraints=fields_with_unique_constraints
-			)
+			remove_unique_constraints(fields_with_unique_constraints)
 
 
 def remove_unique_constraints(fields_with_unique_constraints):
