@@ -54,20 +54,19 @@
    "default": "Customer",
    "fieldname": "applicant_type",
    "fieldtype": "Select",
-   "hidden": 1,
    "label": "Applicant Type",
-   "options": "Employee\nMember\nCustomer",
+   "options": "Employee\nCustomer",
    "reqd": 1
   },
   {
-   "depends_on": "eval: doc.applicant !== null",
+   "depends_on": "eval: doc.applicant_type === \"Employee\" || doc.applicant !== null",
    "fieldname": "applicant",
    "fieldtype": "Dynamic Link",
    "in_global_search": 1,
    "in_standard_filter": 1,
    "label": "Applicant",
    "options": "applicant_type",
-   "read_only": 1
+   "read_only_depends_on": "eval: doc.applicant_type === \"Customer\""
   },
   {
    "fieldname": "column_break_2",
@@ -239,24 +238,28 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "applicant_email_address",
    "fieldtype": "Data",
    "label": "Applicant Email Address",
-   "reqd": 1
+   "mandatory_depends_on": "eval: doc.applicant_type == \"Customer\""
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "applicant_phone_number",
    "fieldtype": "Phone",
    "label": "Applicant Phone Number",
-   "reqd": 1
+   "mandatory_depends_on": "eval: doc.applicant_type == \"Customer\""
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "first_name",
    "fieldtype": "Data",
    "in_global_search": 1,
    "label": "First Name"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "last_name",
    "fieldtype": "Data",
    "label": "Last Name"
@@ -267,16 +270,19 @@
    "label": "Applicant Address Details"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "address_line_1",
    "fieldtype": "Data",
    "label": "Address Line 1"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "address_line_2",
    "fieldtype": "Data",
    "label": "Address Line 2"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "zip_code",
    "fieldtype": "Int",
    "label": "ZIP Code"
@@ -286,16 +292,19 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "city",
    "fieldtype": "Data",
    "label": "City"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "state",
    "fieldtype": "Data",
    "label": "State"
   },
   {
+   "depends_on": "eval: doc.applicant_type == \"Customer\"",
    "fieldname": "country",
    "fieldtype": "Link",
    "label": "Country",
@@ -316,7 +325,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-07-18 14:36:36.073067",
+ "modified": "2025-08-12 15:06:52.004435",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Application",

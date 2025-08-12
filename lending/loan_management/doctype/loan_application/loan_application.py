@@ -42,9 +42,9 @@ class LoanApplication(Document):
 		address_line_2: DF.Data | None
 		amended_from: DF.Link | None
 		applicant: DF.DynamicLink | None
-		applicant_email_address: DF.Data
-		applicant_phone_number: DF.Phone
-		applicant_type: DF.Literal["Employee", "Member", "Customer"]
+		applicant_email_address: DF.Data | None
+		applicant_phone_number: DF.Phone | None
+		applicant_type: DF.Literal["Employee", "Customer"]
 		city: DF.Data | None
 		company: DF.Link
 		country: DF.Link | None
@@ -85,57 +85,58 @@ class LoanApplication(Document):
 		self.check_sanctioned_amount_limit()
 
 	def before_save(self):
-		duplicates = check_duplicate_customers(
-			applicant_phone_number=self.applicant_phone_number,
-			applicant_email_address=self.applicant_email_address,
-		)
-
-		if not self.applicant:
-			customer = frappe.new_doc("Customer")
-			customer.customer_name = self.first_name + " " + self.last_name
-			customer.type = "Company"
-			customer.mobile_number = self.applicant_phone_number
-			customer.email_address = self.applicant_email_address
-			# need to save customer first to link back from contact and address
-			customer.save()
-
-			# copying over contact details into the contact doctype
-			contact = frappe.new_doc("Contact")
-			contact.first_name = self.first_name
-			contact.last_name = self.last_name
-			contact.append("email_ids", {"email_id": self.applicant_email_address, "is_primary": True})
-			contact.append(
-				"phone_nos", {"phone": self.applicant_phone_number, "is_primary_mobile_no": True}
+		if self.applicant_type == "Customer":
+			duplicates = check_duplicate_customers(
+				applicant_phone_number=self.applicant_phone_number,
+				applicant_email_address=self.applicant_email_address,
 			)
 
-			# link back to customer
-			contact.append("links", {"link_doctype": "Customer", "link_name": customer.name})
-			contact.save()
+			if not self.applicant:
+				customer = frappe.new_doc("Customer")
+				customer.customer_name = self.first_name or "" + " " + self.last_name or ""
+				customer.type = "Company"
+				customer.mobile_number = self.applicant_phone_number
+				customer.email_address = self.applicant_email_address
+				# need to save customer first to link back from contact and address
+				customer.save()
 
-			address = frappe.new_doc("Address")
-			address.address_type = "Billing"
+				# copying over contact details into the contact doctype
+				contact = frappe.new_doc("Contact")
+				contact.first_name = self.first_name
+				contact.last_name = self.last_name
+				contact.append("email_ids", {"email_id": self.applicant_email_address, "is_primary": True})
+				contact.append(
+					"phone_nos", {"phone": self.applicant_phone_number, "is_primary_mobile_no": True}
+				)
 
-			# two different naming conventions = chaos
-			if any(
-				[self.address_line_1, self.address_line_2, self.city, self.state, self.zip_code]
-			):  # address should be optional
-				address.address_line1 = self.address_line_1
-				address.address_line2 = self.address_line_2
-				address.city = self.city
-				address.state = self.state
-				address.country = self.country
-				address.pincode = self.zip_code
-				address.append("links", {"link_doctype": "Customer", "link_name": customer.name})
+				# link back to customer
+				contact.append("links", {"link_doctype": "Customer", "link_name": customer.name})
+				contact.save()
 
-				address.save()
+				address = frappe.new_doc("Address")
+				address.address_type = "Billing"
 
-				customer.customer_primary_address = address.name
+				# two different naming conventions = chaos
+				if any(
+					[self.address_line_1, self.address_line_2, self.city, self.state, self.zip_code]
+				):  # address should be optional
+					address.address_line1 = self.address_line_1
+					address.address_line2 = self.address_line_2
+					address.city = self.city
+					address.state = self.state
+					address.country = self.country
+					address.pincode = self.zip_code
+					address.append("links", {"link_doctype": "Customer", "link_name": customer.name})
 
-			customer.customer_primary_contact = contact.name
+					address.save()
 
-			customer.save()
+					customer.customer_primary_address = address.name
 
-			self.applicant = customer.name
+				customer.customer_primary_contact = contact.name
+
+				customer.save()
+
+				self.applicant = customer.name
 
 	def validate_repayment_method(self):
 		if self.repayment_method == "Repay Over Number of Periods" and not self.repayment_periods:
