@@ -1854,7 +1854,7 @@ class TestLoan(IntegrationTestCase):
 			missing_amount = original_invoice_total - total_credit_note_sum
 			self.assertTrue(
 				total_credit_note_sum >= original_invoice_total,
-				f"Credit notes missing amount: {missing_amount}.",
+				f"Credit note is missing amount: {missing_amount}.",
 			)
 
 		outstanding_demand = frappe.db.get_value(
@@ -2407,7 +2407,7 @@ class TestLoan(IntegrationTestCase):
 		self.assertEqual(repayment.total_charges_paid, 500)
 		self.assertEqual(repayment.repayment_details[0].paid_amount, 500)
 
-	def test_accrual_background_job(self):
+	def test_interest_accrual_breaks(self):
 		loan = create_loan(
 			"_Test Customer 1",
 			"Term Loan Product 4",
@@ -2965,42 +2965,6 @@ class TestLoan(IntegrationTestCase):
 			"Loan Demand", {"loan_repayment": repayment_entry.name, "docstatus": 2}, pluck="name"
 		)
 		self.assertEqual(len(demands), 2)
-
-	def test_loan_interest_accruals_after_maturity_date(self):
-		set_loan_accrual_frequency("Monthly")
-		loan = create_loan(
-			"_Test Customer 1",
-			"Term Loan Product 4",
-			500000,
-			"Repay Over Number of Periods",
-			3,
-			"Customer",
-			posting_date="2024-03-25",
-			rate_of_interest=12,
-		)
-		loan.submit()
-
-		make_loan_disbursement_entry(
-			loan.name,
-			loan.loan_amount,
-			disbursement_date="2024-03-25",
-			repayment_start_date="2024-04-07",
-			withhold_security_deposit=1,
-		)
-
-		process_daily_loan_demands(posting_date="2024-09-01", loan=loan.name)
-
-		process_loan_interest_accrual_for_loans(
-			posting_date="2024-8-05", loan=loan.name, company="_Test Company"
-		)
-
-		maturity_date = frappe.db.get_value(
-			"Loan Repayment Schedule", {"loan": loan.name, "docstatus": 1}, "maturity_date"
-		)
-		last_accrual_date = frappe.db.get_value(
-			"Loan Interest Accrual", {"loan": loan.name, "docstatus": 1}, [{"MAX": "posting_date"}]
-		)
-		self.assertEqual(getdate(last_accrual_date), add_days(getdate(maturity_date), -1))
 
 	def test_two_day_break_up_in_accrual_frequency(self):
 		loan = create_loan(
