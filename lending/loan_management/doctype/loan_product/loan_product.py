@@ -6,6 +6,8 @@ import frappe
 from frappe import _
 from frappe.model.document import Document
 
+from lending.loan_management.utils import loan_accounting_enabled
+
 
 class LoanProduct(Document):
 	# begin: auto-generated types
@@ -85,12 +87,9 @@ class LoanProduct(Document):
 		self.set_optional_accounts()
 
 	def validate(self):
-		if self._loan_accounting_enabled():
+		if loan_accounting_enabled(self.company):
 			self.validate_accounts()
 		self.validate_rates()
-
-	def _loan_accounting_enabled(self) -> bool:
-		return bool(frappe.get_cached_value("Company", self.company, "enable_loan_accounting"))
 
 	def set_missing_values(self):
 		company_min_days_bw_disbursement_first_repayment = frappe.get_cached_value(
@@ -131,7 +130,7 @@ class LoanProduct(Document):
 				frappe.throw(_("{0} cannot be negative").format(frappe.unscrub(field)))
 
 	def set_optional_accounts(self):
-		if not self._loan_accounting_enabled():
+		if not loan_accounting_enabled(self.company):
 			return
 
 		required_fields = [

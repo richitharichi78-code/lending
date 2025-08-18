@@ -38,6 +38,7 @@ from lending.loan_management.doctype.loan_security_release.loan_security_release
 from lending.loan_management.doctype.process_loan_interest_accrual.process_loan_interest_accrual import (
 	process_loan_interest_accrual_for_loans,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 # nosemgrep
@@ -182,7 +183,8 @@ class LoanDisbursement(AccountsController):
 		update_loan_securities_values(self.against_loan, self.disbursed_amount, self.doctype)
 		self.create_loan_limit_change_log()
 		self.withheld_security_deposit()
-		self.make_gl_entries()
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries()
 
 	def set_status(self):
 		if self.docstatus == 0:
@@ -310,7 +312,9 @@ class LoanDisbursement(AccountsController):
 			on_trigger_doc_cancel=1,
 		)
 
-		self.make_gl_entries(cancel=1)
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries(cancel=1)
+
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 		self.set_status()
 

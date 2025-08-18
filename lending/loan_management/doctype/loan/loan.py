@@ -29,6 +29,7 @@ from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
@@ -128,9 +129,6 @@ class Loan(AccountsController):
 	def before_validate(self):
 		self.set_optional_accounts()
 
-	def _loan_accounting_enabled(self) -> bool:
-		return bool(frappe.get_cached_value("Company", self.company, "enable_loan_accounting"))
-
 	def validate(self):
 		self.set_status()
 		self.set_loan_amount()
@@ -193,7 +191,7 @@ class Loan(AccountsController):
 				frappe.throw(_("Cost center is mandatory for loans having rate of interest greater than 0"))
 
 	def set_optional_accounts(self):
-		if not self._loan_accounting_enabled():
+		if not loan_accounting_enabled(self.company):
 			return
 
 		required_fields = [
