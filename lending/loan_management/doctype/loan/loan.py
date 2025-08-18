@@ -61,20 +61,20 @@ class Loan(AccountsController):
 		days_past_due: DF.Int
 		debit_adjustment_amount: DF.Currency
 		disbursed_amount: DF.Currency
-		disbursement_account: DF.Link
+		disbursement_account: DF.Link | None
 		disbursement_date: DF.Date | None
 		excess_amount_paid: DF.Currency
 		fldg_trigger_date: DF.Date | None
 		fldg_triggered: DF.Check
 		freeze_account: DF.Check
 		freeze_date: DF.Date | None
-		interest_income_account: DF.Link
+		interest_income_account: DF.Link | None
 		is_npa: DF.Check
 		is_secured_loan: DF.Check
 		is_term_loan: DF.Check
 		limit_applicable_end: DF.Date | None
 		limit_applicable_start: DF.Date | None
-		loan_account: DF.Link
+		loan_account: DF.Link | None
 		loan_amount: DF.Currency
 		loan_application: DF.Link | None
 		loan_category: DF.Link | None
@@ -88,9 +88,9 @@ class Loan(AccountsController):
 		monthly_repayment_amount: DF.Currency
 		moratorium_tenure: DF.Int
 		moratorium_type: DF.Literal["", "EMI", "Principal"]
-		payment_account: DF.Link
+		payment_account: DF.Link | None
 		penalty_charges_rate: DF.Percent
-		penalty_income_account: DF.Link
+		penalty_income_account: DF.Link | None
 		posting_date: DF.Date
 		rate_of_interest: DF.Percent
 		refund_amount: DF.Currency
@@ -124,6 +124,12 @@ class Loan(AccountsController):
 		watch_period_end_date: DF.Date | None
 		written_off_amount: DF.Currency
 	# end: auto-generated types
+
+	def before_validate(self):
+		self.set_optional_accounts()
+
+	def _loan_accounting_enabled(self) -> bool:
+		return bool(frappe.get_cached_value("Company", self.company, "enable_loan_accounting"))
 
 	def validate(self):
 		self.set_status()
@@ -185,6 +191,33 @@ class Loan(AccountsController):
 
 			if not self.cost_center:
 				frappe.throw(_("Cost center is mandatory for loans having rate of interest greater than 0"))
+
+	def set_optional_accounts(self):
+		if not self._loan_accounting_enabled():
+			return
+
+		required_fields = [
+			"disbursement_account",
+			"payment_account",
+			"loan_account",
+			"interest_income_account",
+			"penalty_income_account",
+		]
+
+		missing = []
+		for f in required_fields:
+			if not self.get(f):
+				label = self.meta.get_label(f)
+				missing.append(label)
+
+		if missing:
+			frappe.throw(
+				_("{0} {1} mandatory when Loan Accounting is enabled for {2}").format(
+					", ".join(frappe.bold(m) for m in missing),
+					"are" if len(missing) > 1 else "is",
+					frappe.bold(self.company),
+				)
+			)
 
 	def set_cyclic_date(self):
 		if (
