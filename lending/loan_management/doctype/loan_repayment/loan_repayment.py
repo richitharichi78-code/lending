@@ -3066,8 +3066,7 @@ def bulk_repost(grouped_by_loan_and_loan_disbursement, trace_id):
 			bulk_repayment_log.trace_id = trace_id
 			bulk_repayment_log.save()
 
-			save_point = random_string(length=10)
-			frappe.db.savepoint(save_point=save_point)
+			frappe.db.commit()
 
 			try:
 				# weird way to do things. Please suggest better ways
@@ -3079,7 +3078,7 @@ def bulk_repost(grouped_by_loan_and_loan_disbursement, trace_id):
 
 				bulk_repayment_log.status = "Success"
 			except Exception as e:
-				frappe.db.rollback(save_point=save_point)
+				frappe.db.rollback()
 				traceback_per_loan = traceback.format_exc()
 
 				bulk_repayment_log.traceback = traceback_per_loan
@@ -3094,6 +3093,7 @@ def bulk_repost(grouped_by_loan_and_loan_disbursement, trace_id):
 			frappe.db.commit()  # nosemgrep
 
 		post_bulk_submit_actions(loan, to_date, from_date)
+		frappe.db.commit()  # nosemgrep
 
 
 def loan_and_loan_disbursement_wise_submit(loan, disbursement, rows, bulk_repayment_log_name):
