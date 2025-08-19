@@ -9,6 +9,7 @@ from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
 from lending.loan_management.doctype.loan_repayment.loan_repayment import update_installment_counts
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanDemand(AccountsController):
@@ -74,7 +75,8 @@ class LoanDemand(AccountsController):
 		)
 
 		if self.demand_subtype in ("Principal", "Interest", "Penalty", "Additional Interest"):
-			self.make_gl_entries()
+			if loan_accounting_enabled(self.company):
+				self.make_gl_entries()
 
 		self.update_repayment_schedule()
 
@@ -100,7 +102,10 @@ class LoanDemand(AccountsController):
 
 	def on_cancel(self):
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
-		self.make_gl_entries(cancel=1)
+
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries(cancel=1)
+
 		self.update_repayment_schedule(cancel=1)
 		self.make_credit_note()
 
