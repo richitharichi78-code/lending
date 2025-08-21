@@ -17,6 +17,7 @@ class LoanOriginationSettings(Document):
 	if TYPE_CHECKING:
 		from frappe.types import DF
 
+		employee_loans: DF.Check
 		unique_customer: DF.Check
 	# end: auto-generated types
 

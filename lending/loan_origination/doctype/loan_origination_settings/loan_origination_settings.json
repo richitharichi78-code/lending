@@ -5,7 +5,8 @@
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
-  "unique_customer"
+  "unique_customer",
+  "employee_loans"
  ],
  "fields": [
   {
@@ -14,13 +15,20 @@
    "fieldname": "unique_customer",
    "fieldtype": "Check",
    "label": "Unique Customer"
+  },
+  {
+   "default": "0",
+   "description": "Adds the option to have employee loans",
+   "fieldname": "employee_loans",
+   "fieldtype": "Check",
+   "label": "Employee Loans"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-06-30 16:13:21.546763",
+ "modified": "2025-08-21 17:35:48.628799",
  "modified_by": "Administrator",
  "module": "Loan Origination",
  "name": "Loan Origination Settings",
