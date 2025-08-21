@@ -18,6 +18,14 @@ frappe.ui.form.on('Loan Application', {
 				return frm.doc.status === "Approved" && frm.doc.docstatus === 1;
 			}
 		};
+        frappe.db.get_single_value("Loan Origination Settings", "employee_loans")
+            .then(value => {
+                if (value) {
+                    frm.set_df_property("applicant_type", "hidden", 0);
+                } else {
+                    frm.set_df_property("applicant_type", "hidden", 1);
+                }
+            });
 
 	},
 	refresh: function(frm) {
