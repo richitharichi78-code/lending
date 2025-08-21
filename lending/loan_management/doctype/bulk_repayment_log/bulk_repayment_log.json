@@ -9,11 +9,15 @@
   "section_break_0dlz",
   "amended_from",
   "loan",
-  "timestamp",
-  "details",
+  "loan_disbursement",
+  "trace_id",
+  "column_break_kyhi",
   "status",
-  "traceback",
-  "trace_id"
+  "timestamp",
+  "failed_repayment",
+  "particulars_section",
+  "details",
+  "traceback"
  ],
  "fields": [
   {
@@ -60,13 +64,34 @@
    "fieldname": "trace_id",
    "fieldtype": "Data",
    "label": "Trace ID"
+  },
+  {
+   "fieldname": "column_break_kyhi",
+   "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "eval: doc.status === \"Failure\"",
+   "fieldname": "failed_repayment",
+   "fieldtype": "Text",
+   "label": "Failed Repayment"
+  },
+  {
+   "fieldname": "particulars_section",
+   "fieldtype": "Section Break",
+   "label": "Particulars"
+  },
+  {
+   "fieldname": "loan_disbursement",
+   "fieldtype": "Link",
+   "label": "Loan Disbursement",
+   "options": "Loan Disbursement"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-03 14:08:36.162028",
+ "modified": "2025-08-19 01:47:22.826162",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Bulk Repayment Log",

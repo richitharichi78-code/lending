@@ -16,7 +16,9 @@ class BulkRepaymentLog(Document):
 
 		amended_from: DF.Link | None
 		details: DF.LongText | None
+		failed_repayment: DF.Text | None
 		loan: DF.Link | None
+		loan_disbursement: DF.Link | None
 		status: DF.Data | None
 		timestamp: DF.Datetime | None
 		trace_id: DF.Data | None
