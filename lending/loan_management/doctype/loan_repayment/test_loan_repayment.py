@@ -488,7 +488,7 @@ class TestLoanRepayment(IntegrationTestCase):
 
 		process_daily_loan_demands(posting_date="2025-03-15", loan=loan.name)
 
-		payable_amount = calculate_amounts(against_loan=loan.name, posting_date="2025-03-15")[
+		payable_amount = calculate_amounts(against_loan=loan.name, posting_date="2025-03-20")[
 			"payable_amount"
 		]
 
