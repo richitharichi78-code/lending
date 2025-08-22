@@ -369,6 +369,7 @@ class LoanRepayment(AccountsController):
 		repost.repost_date = self.value_date
 		repost.cancel_future_accruals_and_demands = True
 		repost.cancel_future_emi_demands = True
+		repost.clear_demand_allocation_before_repost = True
 		repost.submit()
 
 	def post_suspense_entries(self, cancel=0):
