@@ -3,7 +3,7 @@
   "docstatus": 0,
   "doctype": "Workflow",
   "document_type": "Loan Application",
-  "is_active": 1,
+  "is_active": 0,
   "modified": "2025-06-27 16:33:04.519146",
   "name": "Loan Application Workflow",
   "override_status": 0,
