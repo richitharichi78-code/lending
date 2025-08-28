@@ -109,11 +109,10 @@ jobs:
         run: cd ~/frappe-bench/ && bench --site test_site run-parallel-tests --app lending --total-builds ${{ strategy.job-total }} --build-number ${{ matrix.container }}
         env:
           TYPE: server
-          CAPTURE_COVERAGE: ${{ github.event_name != 'pull_request' }}
+          CAPTURE_COVERAGE: True
 
       - name: Upload coverage artifact
         uses: actions/upload-artifact@v4
-        if: github.event_name != 'pull_request'
         with:
           name: coverage-${{ matrix.container }}
           path: /home/runner/frappe-bench/sites/coverage.xml
@@ -122,7 +121,6 @@ jobs:
     name: Coverage Wrap Up
     needs: tests
     runs-on: ubuntu-latest
-    if: ${{ github.event_name != 'pull_request' }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/download-artifact@v4
