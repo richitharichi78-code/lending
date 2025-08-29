@@ -621,13 +621,14 @@ class LoanRepayment(AccountsController):
 		return base_amount_details
 
 	def create_loan_limit_change_log(self):
-		create_loan_limit_change_log(
-			loan=self.against_loan,
-			event="Repayment",
-			change_date=self.value_date,
-			value_type="Available Limit Amount",
-			value_change=self.principal_amount_paid,
-		)
+		if self.repayment_schedule_type == "Line of Credit":
+			create_loan_limit_change_log(
+				loan=self.against_loan,
+				event="Repayment",
+				change_date=self.value_date,
+				value_type="Available Limit Amount",
+				value_change=self.principal_amount_paid,
+			)
 
 	def on_cancel(self):
 		from lending.loan_management.doctype.loan_npa_log.loan_npa_log import delink_npa_logs
