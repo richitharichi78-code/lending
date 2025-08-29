@@ -620,7 +620,7 @@ class LoanRepayment(AccountsController):
 		return base_amount_details
 
 	def create_loan_limit_change_log(self):
-		if self.repayment_schedule_type == "Line Of Credit":
+		if self.repayment_schedule_type == "Line of Credit":
 			create_loan_limit_change_log(
 				loan=self.against_loan,
 				event="Repayment",
