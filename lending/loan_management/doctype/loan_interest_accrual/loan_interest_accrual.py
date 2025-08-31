@@ -1074,17 +1074,6 @@ def reverse_loan_interest_accruals(
 			accrual_doc.flags.ignore_links = True
 			accrual_doc.cancel()
 
-		if is_npa:
-			interest_amount = 0
-			penalty_amount = 0
-			additional_interest_amount = 0
-
-			if interest_type == "Normal Interest":
-				interest_amount = accrual_doc.interest_amount
-			elif interest_type == "Penal Interest":
-				penalty_amount = accrual_doc.interest_amount - accrual_doc.additional_interest_amount
-				additional_interest_amount = accrual_doc.additional_interest_amount
-
 	return accruals
 
 
