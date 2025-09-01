@@ -22,6 +22,7 @@ from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
 from lending.loan_management.doctype.loan_demand.loan_demand import create_loan_demand
+from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
@@ -120,7 +121,9 @@ class LoanInterestAccrual(AccountsController):
 	def on_submit(self):
 		from lending.loan_management.doctype.loan.loan import make_suspense_journal_entry
 
-		self.make_gl_entries()
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries()
+
 		if self.is_npa and not self.unmark_npa:
 			if self.interest_type == "Normal Interest":
 				is_penal = False
@@ -145,7 +148,8 @@ class LoanInterestAccrual(AccountsController):
 				self.db_set("additional_interest_suspense_entry", additional_interest_jv)
 
 	def on_cancel(self):
-		self.make_gl_entries(cancel=1)
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries(cancel=1)
 
 		if self.normal_interest_journal_entry:
 			doc = frappe.get_doc("Journal Entry", self.normal_interest_journal_entry)

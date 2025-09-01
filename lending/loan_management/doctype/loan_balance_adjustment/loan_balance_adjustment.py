@@ -12,6 +12,7 @@ from erpnext.controllers.accounts_controller import AccountsController
 from lending.loan_management.doctype.process_loan_interest_accrual.process_loan_interest_accrual import (
 	process_loan_interest_accrual_for_loans,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanBalanceAdjustment(AccountsController):
@@ -54,11 +55,15 @@ class LoanBalanceAdjustment(AccountsController):
 
 	def on_submit(self):
 		self.set_status_and_amounts()
-		self.make_gl_entries()
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries()
 
 	def on_cancel(self):
 		self.set_status_and_amounts(cancel=1)
-		self.make_gl_entries(cancel=1)
+
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries(cancel=1)
+
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 
 	def set_missing_values(self):

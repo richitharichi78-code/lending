@@ -10,6 +10,7 @@ from erpnext.accounts.general_ledger import make_gl_entries
 from erpnext.controllers.accounts_controller import AccountsController
 
 from lending.loan_management.doctype.loan_repayment.loan_repayment import get_net_paid_amount
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanRefund(AccountsController):
@@ -58,12 +59,16 @@ class LoanRefund(AccountsController):
 
 	def on_submit(self):
 		self.update_outstanding_amount()
-		self.make_gl_entries()
+
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries()
 
 	def on_cancel(self):
 		self.update_outstanding_amount(cancel=1)
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
-		self.make_gl_entries(cancel=1)
+
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries(cancel=1)
 
 	def update_outstanding_amount(self, cancel=0):
 		security_deposit_available_amount = 0

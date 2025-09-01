@@ -9,6 +9,7 @@ from erpnext.accounts.general_ledger import make_gl_entries
 from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
 	create_loan_demand,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 def generate_demand(self, method=None):
@@ -114,7 +115,8 @@ def make_partner_charge_gl_entries(doc, method):
 						doc, item, tax_amount, tax.account_head, partner_payable_account, gl_entries
 					)
 
-		make_gl_entries(gl_entries)
+		if loan_accounting_enabled(doc.company):
+			make_gl_entries(gl_entries)
 
 
 def make_suspense_gl_entry_for_charges(doc, method):

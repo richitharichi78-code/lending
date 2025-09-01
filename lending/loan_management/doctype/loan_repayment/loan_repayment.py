@@ -26,6 +26,7 @@ from lending.loan_management.doctype.loan_security_assignment.loan_security_assi
 from lending.loan_management.doctype.loan_security_shortfall.loan_security_shortfall import (
 	update_shortfall_status,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanRepayment(AccountsController):
@@ -261,7 +262,9 @@ class LoanRepayment(AccountsController):
 
 		update_loan_securities_values(self.against_loan, self.principal_amount_paid, self.doctype)
 		self.create_loan_limit_change_log()
-		self.make_gl_entries()
+
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries()
 
 		if (
 			self.is_term_loan
@@ -675,7 +678,10 @@ class LoanRepayment(AccountsController):
 			"Loan Repayment Repost",
 			"Loan Adjustment",
 		]
-		self.make_gl_entries(cancel=1)
+
+		if loan_accounting_enabled(self.company):
+			self.make_gl_entries(cancel=1)
+
 		self.post_suspense_entries(cancel=1)
 		update_installment_counts(self.against_loan, loan_disbursement=self.loan_disbursement)
 
