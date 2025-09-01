@@ -108,7 +108,7 @@ class LoanWriteOff(AccountsController):
 
 		self.make_gl_entries()
 		self.cancel_suspense_entries()
-		write_off_charges(self.loan, self.value_date, self.company, on_write_off=True)
+		write_off_charges(self.loan, self.posting_date, self.value_date, self.company, on_write_off=True)
 		self.close_employee_loan()
 		self.update_outstanding_amount_and_status()
 
@@ -139,7 +139,12 @@ class LoanWriteOff(AccountsController):
 
 	def cancel_suspense_entries(self):
 		write_off_suspense_entries(
-			self.loan, self.loan_product, self.value_date, self.company, is_write_off=self.is_npa
+			self.loan,
+			self.loan_product,
+			self.posting_date,
+			self.value_date,
+			self.company,
+			is_write_off=self.is_npa,
 		)
 
 	def on_cancel(self):
@@ -307,6 +312,7 @@ def write_off_suspense_entries(
 	loan,
 	loan_product,
 	posting_date,
+	value_date,
 	company,
 	is_write_off=0,
 	interest_amount=0,
@@ -377,7 +383,14 @@ def write_off_suspense_entries(
 				accounts.interest_waiver_account if is_write_off else accounts.interest_income_account
 			)
 			make_journal_entry(
-				posting_date, company, loan, amount, debit_account, credit_account, is_reverse=is_reverse
+				posting_date,
+				value_date,
+				company,
+				loan,
+				amount,
+				debit_account,
+				credit_account,
+				is_reverse=is_reverse,
 			)
 
 	if amounts.get(accounts.penalty_suspense_account, 0) > 0:
@@ -394,7 +407,14 @@ def write_off_suspense_entries(
 				accounts.penalty_waiver_account if is_write_off else accounts.penalty_income_account
 			)
 			make_journal_entry(
-				posting_date, company, loan, amount, debit_account, credit_account, is_reverse=is_reverse
+				posting_date,
+				value_date,
+				company,
+				loan,
+				amount,
+				debit_account,
+				credit_account,
+				is_reverse=is_reverse,
 			)
 
 	if amounts.get(accounts.additional_interest_suspense, 0) > 0:
@@ -411,13 +431,21 @@ def write_off_suspense_entries(
 				accounts.additional_interest_waiver if is_write_off else accounts.additional_interest_income
 			)
 			make_journal_entry(
-				posting_date, company, loan, amount, debit_account, credit_account, is_reverse=is_reverse
+				posting_date,
+				value_date,
+				company,
+				loan,
+				amount,
+				debit_account,
+				credit_account,
+				is_reverse=is_reverse,
 			)
 
 
 def write_off_charges(
 	loan,
 	posting_date,
+	value_date,
 	company,
 	amount_details=None,
 	on_write_off=False,
@@ -483,6 +511,7 @@ def write_off_charges(
 					income_amount = amount - base_amount
 					make_journal_entry(
 						posting_date,
+						value_date,
 						company,
 						loan,
 						income_amount,
@@ -493,7 +522,7 @@ def write_off_charges(
 
 			waiver_account = suspense_account_map.get(account)
 			make_journal_entry(
-				posting_date, company, loan, amount, account, waiver_account, is_reverse=is_reverse
+				posting_date, value_date, company, loan, amount, account, waiver_account, is_reverse=is_reverse
 			)
 
 

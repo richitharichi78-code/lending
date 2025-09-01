@@ -18,6 +18,14 @@ frappe.ui.form.on('Loan Application', {
 				return frm.doc.status === "Approved" && frm.doc.docstatus === 1;
 			}
 		};
+        frappe.db.get_single_value("Loan Origination Settings", "employee_loans")
+            .then(value => {
+                if (value) {
+                    frm.set_df_property("applicant_type", "hidden", 0);
+                } else {
+                    frm.set_df_property("applicant_type", "hidden", 1);
+                }
+            });
 
 	},
 	refresh: function(frm) {
@@ -112,7 +120,56 @@ frappe.ui.form.on('Loan Application', {
 		if (flt(maximum_amount)) {
 			frm.set_value('maximum_loan_amount', flt(maximum_amount));
 		}
-	}
+	},
+
+	applicant_phone_number: function(frm) {
+		frm.trigger("check_applicant");
+	},
+	applicant_email_address: function(frm) {
+		frm.trigger("check_applicant")
+	},
+	check_applicant: function(frm) {
+		if (!frm.doc.applicant && frm.doc.applicant_type === "Customer") {
+			frappe.call({
+				method: "lending.loan_management.doctype.loan_application.loan_application.check_duplicate_customers",
+				args: {
+					applicant_phone_number: frm.doc.applicant_phone_number,
+					applicant_email_address: frm.doc.applicant_email_address
+				},
+				callback: function(r) {
+					const duplicates = r.message;
+					if (duplicates.length > 0) {
+						frappe.confirm(__("There already exists a borrower with the same contact details. Do you want to fetch the borrower here?"),
+							() => {
+								frappe.db.get_doc("Customer", duplicates[0]).then((customer) => {
+									frm.set_value("applicant", customer.name);
+									frm.set_value("applicant_phone_number", customer.mobile_no);
+									frm.set_value("applicant_email_address", customer.email_id);
+									if (customer.customer_primary_address) {
+										frappe.db.get_doc("Address", customer.customer_primary_address).then((address) => {
+											frm.set_value("address_line_1", address.address_line1);
+											frm.set_value("address_line_2", address.address_line2);
+											frm.set_value("zip_code", address.pincode);
+											frm.set_value("city", address.city);
+											frm.set_value("state", address.state);
+											frm.set_value("country", address.country);
+										});
+									};
+									if (customer.customer_primary_contact) {
+										frappe.db.get_doc("Contact", customer.customer_primary_contact).then((contact) => {
+											frm.set_value("first_name", customer.first_name);
+											frm.set_value("last_name", customer.last_name);
+										});
+									}
+								});
+							}
+						)
+					}
+				}
+			})
+		}
+	},
+
 });
 
 frappe.ui.form.on("Proposed Pledge", {

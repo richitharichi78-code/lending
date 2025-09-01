@@ -587,6 +587,8 @@ def create_loan_application(
 	loan_application.loan_product = loan_product
 	loan_application.posting_date = posting_date or nowdate()
 	loan_application.is_secured_loan = 1
+	loan_application.applicant_email_address = "lending@example.com"
+	loan_application.applicant_phone_number = "+91-9108273645"
 
 	if repayment_method:
 		loan_application.repayment_method = repayment_method
@@ -772,7 +774,7 @@ def setup_loan_demand_offset_order(company=None):
 	)
 	create_demand_offset_order(
 		"Test EMI Based Standard Loan Demand Offset Order",
-		["EMI (Principal + Interest)", "Penalty", "Charges"],
+		["EMI (Principal + Interest)", "Penalty", "Additional Interest", "Charges"],
 	)
 
 	create_demand_offset_order(
