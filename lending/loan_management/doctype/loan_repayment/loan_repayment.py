@@ -1927,7 +1927,6 @@ class LoanRepayment(AccountsController):
 				"customer_refund_account",
 			],
 			as_dict=1,
-			cache=True,
 		)
 
 		if flt(self.principal_amount_paid, precision) > 0:
