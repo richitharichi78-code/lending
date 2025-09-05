@@ -4,12 +4,25 @@ import frappe
 from frappe import _
 from frappe.utils import flt
 
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import SalesInvoice
 from erpnext.accounts.general_ledger import make_gl_entries
 
 from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
 	create_loan_demand,
 )
 from lending.loan_management.utils import loan_accounting_enabled
+
+
+class CustomSalesInvoice(SalesInvoice):
+	def make_gl_entries(self, *args, **kwargs):
+		if loan_accounting_enabled(self.company):
+			super().make_gl_entries(*args, **kwargs)
+		self.set_status(update=True)
+
+	def make_gl_entries_on_cancel(self, *args, **kwargs):
+		if loan_accounting_enabled(self.company):
+			super().make_gl_entries_on_cancel(*args, **kwargs)
+		self.set_status(update=True)
 
 
 def generate_demand(self, method=None):
