@@ -2080,6 +2080,84 @@ class TestLoan(IntegrationTestCase):
 
 		self.assertEqual(second_repay_schedule_current_principal_amount, second_adjustment_after_pos)
 
+	def test_dpd_calculation_for_non_loc_loan_without_disbursement(self):
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			100000,
+			"Repay Over Number of Periods",
+			30,
+			repayment_start_date="2024-10-05",
+			posting_date="2024-09-15",
+			rate_of_interest=10,
+			applicant_type="Customer",
+		).submit()
+
+		make_loan_disbursement_entry(
+			loan.name, loan.loan_amount, disbursement_date="2024-09-15", repayment_start_date="2024-10-05"
+		)
+		loan_disbursement = frappe.db.get_value(
+			"Loan Disbursement", {"against_loan": loan.name, "docstatus": 1}, "name"
+		)
+
+		process_daily_loan_demands(posting_date="2024-10-05", loan=loan.name)
+
+		repayment_entry_1 = create_repayment_entry(
+			loan.name, "2024-10-05", 3000, loan_disbursement=loan_disbursement
+		).submit()
+		repayment_entry_2 = create_repayment_entry(
+			loan.name, "2024-10-09", 782, loan_disbursement=loan_disbursement
+		).submit()
+
+		process_daily_loan_demands(posting_date="2024-11-05", loan=loan.name)
+
+		repayment_entry_3 = create_repayment_entry(loan.name, "2024-11-05", 3000).submit()
+		repayment_entry_4 = create_repayment_entry(loan.name, "2024-11-10", 782).submit()
+
+		create_process_loan_classification(
+			posting_date="2024-10-05", loan=loan.name, loan_disbursement=loan_disbursement
+		)
+
+		dpd_logs = frappe.db.sql(
+			"""
+			SELECT posting_date, days_past_due
+			FROM `tabDays Past Due Log`
+			WHERE loan = %s
+			ORDER BY posting_date
+			""",
+			(loan.name),
+			as_dict=1,
+		)
+
+		expected_dpd_values = {
+			"2024-10-05": 1,
+			"2024-10-06": 2,
+			"2024-10-07": 3,
+			"2024-10-08": 4,
+			"2024-10-09": 0,
+			"2024-10-10": 0,
+			"2024-11-04": 0,
+			"2024-11-05": 1,
+			"2024-11-06": 2,
+			"2024-11-07": 3,
+			"2024-11-08": 4,
+			"2024-11-09": 5,
+			"2024-11-10": 0,
+		}
+
+		for log in dpd_logs:
+			posting_date = log["posting_date"]
+			dpd_value = log["days_past_due"]
+
+			posting_date_str = posting_date.strftime("%Y-%m-%d")
+
+			expected_dpd = expected_dpd_values.get(posting_date_str, 0)
+			self.assertEqual(
+				dpd_value,
+				expected_dpd,
+				f"DPD mismatch for {posting_date}: Expected {expected_dpd}, got {dpd_value}",
+			)
+
 	def test_dpd_calculation(self):
 		loan = create_loan(
 			"_Test Customer 1",
