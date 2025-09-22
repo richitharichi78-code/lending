@@ -556,7 +556,7 @@ def get_write_off_waivers_for_cancel(loan_name, posting_date):
 		"Loan Repayment",
 		filters={
 			"against_loan": loan_name,
-			"posting_date": ("<=", posting_date),
+			"value_date": ("<=", posting_date),
 			"docstatus": 1,
 			"is_write_off_waiver": 1,
 		},
@@ -570,7 +570,7 @@ def get_write_off_waivers(loan_name, posting_date):
 			"Loan Repayment",
 			filters={
 				"against_loan": loan_name,
-				"posting_date": ("<=", posting_date),
+				"value_date": ("<=", posting_date),
 				"docstatus": 1,
 				"is_write_off_waiver": 1,
 			},
@@ -586,7 +586,7 @@ def get_write_off_recovery_details(loan_name, posting_date, settlement_date=None
 	filters = {"against_loan": loan_name, "posting_date": ("<=", posting_date), "docstatus": 1}
 
 	if settlement_date:
-		filters["posting_date"] = (">", settlement_date)
+		filters["value_date"] = (">", settlement_date)
 	else:
 		filters["repayment_type"] = ("in", ["Write Off Recovery", "Write Off Settlement"])
 
