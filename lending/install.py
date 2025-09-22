@@ -42,7 +42,7 @@ LOAN_CUSTOM_FIELDS = {
 		{
 			"fieldname": "loan_tab",
 			"fieldtype": "Tab Break",
-			"label": "Loan",
+			"label": "Lending",
 			"insert_after": "default_in_transit_warehouse",
 		},
 		{
