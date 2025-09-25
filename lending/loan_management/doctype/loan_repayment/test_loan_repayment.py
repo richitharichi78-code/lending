@@ -228,18 +228,32 @@ class TestLoanRepayment(IntegrationTestCase):
 		process_loan_interest_accrual_for_loans(
 			loan=loan.name, posting_date=add_days("2024-05-05", 6), company="_Test Company"
 		)
-		penal_interest = frappe.get_value(
-			"Loan Interest Accrual",
-			{"loan": loan.name, "interest_type": "Penal Interest", "docstatus": 1},
-			[{"SUM": "interest_amount"}],
-		)
+
+		LoanInterestAccrual = DocType("Loan Interest Accrual")
+
+		penal_interest = (
+			frappe.qb.from_(LoanInterestAccrual)
+			.select(fn.Sum(LoanInterestAccrual.interest_amount))
+			.where(
+				(LoanInterestAccrual.loan == loan.name)
+				& (LoanInterestAccrual.interest_type == "Penal Interest")
+				& (LoanInterestAccrual.docstatus == 1)
+			)
+		).run()[0][0]
+
 		self.assertGreater(penal_interest, 0)
 		create_repayment_entry(loan=loan.name, value_date="2024-05-05", paid_amount=178025).submit()
-		penal_interest = frappe.get_value(
-			"Loan Interest Accrual",
-			{"loan": loan.name, "interest_type": "Penal Interest", "docstatus": 1},
-			[{"SUM": "interest_amount"}],
-		)
+
+		penal_interest = (
+			frappe.qb.from_(LoanInterestAccrual)
+			.select(fn.Sum(LoanInterestAccrual.interest_amount))
+			.where(
+				(LoanInterestAccrual.loan == loan.name)
+				& (LoanInterestAccrual.interest_type == "Penal Interest")
+				& (LoanInterestAccrual.docstatus == 1)
+			)
+		).run()[0][0]
+
 		self.assertEqual(penal_interest, None)
 
 	def test_demand_generation_upon_pre_payment(self):

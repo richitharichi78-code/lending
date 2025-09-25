@@ -397,12 +397,15 @@ class LoanRepaymentRepost(Document):
 			frappe.db.set_value("Loan", self.loan, "status", "Written Off")
 
 		if self.loan_disbursement:
-			filters = {"against_loan": self.loan, "docstatus": 1}
-			total_principal_paid = frappe.db.get_value(
-				"Loan Repayment",
-				filters,
-				[{"SUM": "principal_amount_paid"}],
-			)
+			LoanRepayment = DocType("Loan Repayment")
+
+			filters = (LoanRepayment.against_loan == self.loan) & (LoanRepayment.docstatus == 1)
+
+			total_principal_paid = (
+				frappe.qb.from_(LoanRepayment)
+				.select(fn.Sum(LoanRepayment.principal_amount_paid))
+				.where(filters)
+			).run()[0][0] or 0
 
 			frappe.db.set_value(
 				"Loan",
