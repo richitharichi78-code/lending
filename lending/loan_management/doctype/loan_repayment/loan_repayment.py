@@ -278,20 +278,26 @@ class LoanRepayment(AccountsController):
 			and not self.flags.from_repost
 		):
 			max_date = None
-			reversed_accruals += reverse_loan_interest_accruals(
-				self.against_loan,
-				self.value_date,
-				interest_type="Penal Interest",
-				loan_disbursement=self.loan_disbursement,
-				in_background=True if self.repayment_type == "Full Settlement" else False,
+			reversed_accruals += (
+				reverse_loan_interest_accruals(
+					self.against_loan,
+					self.value_date,
+					interest_type="Penal Interest",
+					loan_disbursement=self.loan_disbursement,
+					in_background=True if self.repayment_type == "Full Settlement" else False,
+				)
+				or []
 			)
 
 			if self.repayment_type in ("Full Settlement", "Write Off Settlement"):
-				reversed_accruals += reverse_loan_interest_accruals(
-					self.against_loan,
-					self.value_date,
-					interest_type="Normal Interest",
-					in_background=True,
+				reversed_accruals += (
+					reverse_loan_interest_accruals(
+						self.against_loan,
+						self.value_date,
+						interest_type="Normal Interest",
+						in_background=True,
+					)
+					or []
 				)
 
 			if not self.is_write_off_waiver:
