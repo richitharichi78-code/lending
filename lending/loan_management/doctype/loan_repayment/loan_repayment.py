@@ -291,8 +291,6 @@ class LoanRepayment(AccountsController):
 					self.against_loan,
 					self.value_date,
 					interest_type="Normal Interest",
-					is_npa=self.is_npa,
-					on_payment_allocation=True,
 					in_background=True,
 				)
 
