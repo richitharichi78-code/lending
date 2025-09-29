@@ -280,9 +280,8 @@ class LoanRepayment(AccountsController):
 				self.against_loan,
 				self.value_date,
 				interest_type="Penal Interest",
-				is_npa=self.is_npa,
 				loan_disbursement=self.loan_disbursement,
-				on_payment_allocation=True,
+				in_background=True if self.repayment_type == "Full Settlement" else False,
 			)
 
 			if self.repayment_type in ("Full Settlement", "Write Off Settlement"):
@@ -292,6 +291,7 @@ class LoanRepayment(AccountsController):
 					interest_type="Normal Interest",
 					is_npa=self.is_npa,
 					on_payment_allocation=True,
+					in_background=True,
 				)
 
 			if not self.is_write_off_waiver:
@@ -465,6 +465,7 @@ class LoanRepayment(AccountsController):
 
 		write_off_charges(
 			self.against_loan,
+			self.posting_date,
 			self.value_date,
 			self.company,
 			amount_details=account_charge_map,
@@ -528,8 +529,6 @@ class LoanRepayment(AccountsController):
 			self.against_loan,
 			self.value_date,
 			interest_type="Normal Interest",
-			is_npa=self.is_npa,
-			on_payment_allocation=True,
 			loan_disbursement=self.loan_disbursement,
 			loan_repayment_schedule=loan_repayment_schedule,
 			future_accruals=on_back_dated_prepayment,
@@ -774,22 +773,12 @@ class LoanRepayment(AccountsController):
 		if not self.cost_center:
 			self.cost_center = erpnext.get_default_cost_center(self.company)
 
-		if not self.interest_payable or self.flags.from_repost:
-			self.interest_payable = flt(amounts["interest_amount"], precision)
-
-		if not self.penalty_amount or self.flags.from_repost:
-			self.penalty_amount = flt(amounts["penalty_amount"], precision)
-
+		self.interest_payable = flt(amounts["interest_amount"], precision)
+		self.penalty_amount = flt(amounts["penalty_amount"], precision)
 		self.pending_principal_amount = flt(amounts["pending_principal_amount"], precision)
-
-		if not self.payable_principal_amount or self.flags.from_repost:
-			self.payable_principal_amount = flt(amounts["payable_principal_amount"], precision)
-
-		if not self.payable_amount or self.flags.from_repost:
-			self.payable_amount = flt(amounts["payable_amount"], precision)
-
-		if not self.total_charges_payable or self.flags.from_repost:
-			self.total_charges_payable = flt(amounts["total_charges_payable"], precision)
+		self.payable_principal_amount = flt(amounts["payable_principal_amount"], precision)
+		self.payable_amount = flt(amounts["payable_amount"], precision)
+		self.total_charges_payable = flt(amounts["total_charges_payable"], precision)
 
 		shortfall_amount = flt(
 			frappe.db.get_value(
@@ -1202,7 +1191,9 @@ class LoanRepayment(AccountsController):
 			["write_off_amount", "excess_amount_acceptance_limit"],
 		)
 
-		shortfall_amount = self.pending_principal_amount - self.principal_amount_paid
+		shortfall_amount = flt(self.pending_principal_amount, precision) - flt(
+			self.principal_amount_paid, precision
+		)
 
 		if self.repayment_type in ("Interest Waiver", "Penalty Waiver", "Charges Waiver"):
 			total_payable = (
@@ -1224,7 +1215,6 @@ class LoanRepayment(AccountsController):
 		if self.excess_amount > 0 and self.repayment_schedule_type == "Line of Credit":
 			self.flags.auto_close = True
 
-		shortfall_amount = flt(self.pending_principal_amount - self.principal_amount_paid, precision)
 		shortfall_amount += flt(
 			flt(self.total_charges_payable) - flt(self.total_charges_paid), precision
 		)
@@ -1237,12 +1227,14 @@ class LoanRepayment(AccountsController):
 		):
 			self.flags.auto_close = True
 
-		excess_amount = self.principal_amount_paid - self.pending_principal_amount
+		excess_amount = flt(self.principal_amount_paid, precision) - flt(
+			self.pending_principal_amount, precision
+		)
 		if excess_amount > 0 and excess_amount <= excess_amount_limit:
 			self.flags.auto_close = True
 
 		if (
-			self.principal_amount_paid >= self.pending_principal_amount
+			flt(self.principal_amount_paid, precision) >= flt(self.pending_principal_amount, precision)
 			and not flt(shortfall_amount)
 			and flt(self.excess_amount) <= flt(excess_amount_limit)
 			and flt(total_payable - self.amount_paid, precision) <= flt(auto_write_off_amount, precision)
