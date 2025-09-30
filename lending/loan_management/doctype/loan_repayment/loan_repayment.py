@@ -2687,7 +2687,7 @@ def process_amount_for_loan(
 
 
 @frappe.whitelist()
-def get_bulk_due_details(loans, posting_date):
+def get_bulk_due_details(loans, posting_date, consolidated=False):
 	from lending.loan_management.doctype.loan_repayment.utils import (
 		get_disbursement_map,
 		get_last_demand_date,
@@ -2719,7 +2719,9 @@ def get_bulk_due_details(loans, posting_date):
 	)
 
 	disbursement_map = get_disbursement_map(loan_details)
-	principal_amount_map = get_pending_principal_amount_for_loans(loan_details, disbursement_map)
+	principal_amount_map = get_pending_principal_amount_for_loans(
+		loan_details, disbursement_map, consolidated=consolidated
+	)
 
 	unbooked_interest_map = {
 		loan: get_unbooked_interest(
@@ -2752,7 +2754,7 @@ def get_bulk_due_details(loans, posting_date):
 	}
 	due_details = []
 	for loan in loan_details:
-		if loan.repayment_schedule_type == "Line of Credit":
+		if loan.repayment_schedule_type == "Line of Credit" and not consolidated:
 			demands = demand_map.get(loan.name, [])
 			for disbursement in disbursement_map.get(loan.name, []):
 				amounts = init_amounts()
