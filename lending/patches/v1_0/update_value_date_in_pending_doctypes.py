@@ -34,6 +34,7 @@ def execute():
 		"""
 		UPDATE `tabGL Entry`
 		SET value_date = posting_date
+		WHERE docstatus = 1
 		AND value_date IS NULL
 	"""
 	)
