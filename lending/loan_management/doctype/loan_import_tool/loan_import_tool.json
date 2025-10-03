@@ -1,0 +1,92 @@
+{
+ "actions": [],
+ "allow_copy": 1,
+ "allow_rename": 1,
+ "creation": "2025-10-03 11:37:48.517646",
+ "doctype": "DocType",
+ "engine": "InnoDB",
+ "field_order": [
+  "company",
+  "create_missing_customers",
+  "column_break_vwno",
+  "import_type",
+  "import_file",
+  "import_log_section",
+  "show_only_failed_logs",
+  "import_log_preview"
+ ],
+ "fields": [
+  {
+   "fieldname": "company",
+   "fieldtype": "Link",
+   "in_list_view": 1,
+   "label": "Company",
+   "options": "Company",
+   "reqd": 1
+  },
+  {
+   "fieldname": "import_file",
+   "fieldtype": "Attach",
+   "label": "Import File"
+  },
+  {
+   "fieldname": "import_type",
+   "fieldtype": "Select",
+   "label": "Import Type",
+   "options": "Mid Tenure Loans\nClosed Loans",
+   "reqd": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "create_missing_customers",
+   "fieldtype": "Check",
+   "label": "Create Missing Customers"
+  },
+  {
+   "fieldname": "column_break_vwno",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "import_log_section",
+   "fieldtype": "Section Break",
+   "label": "Import Log"
+  },
+  {
+   "default": "0",
+   "fieldname": "show_only_failed_logs",
+   "fieldtype": "Check",
+   "label": "Show Only Failed Logs"
+  },
+  {
+   "fieldname": "import_log_preview",
+   "fieldtype": "HTML",
+   "label": "Import Log Preview"
+  }
+ ],
+ "grid_page_length": 50,
+ "hide_toolbar": 1,
+ "index_web_pages_for_search": 1,
+ "issingle": 1,
+ "links": [],
+ "modified": "2025-10-03 15:44:36.171480",
+ "modified_by": "Administrator",
+ "module": "Loan Management",
+ "name": "Loan Import Tool",
+ "owner": "Administrator",
+ "permissions": [
+  {
+   "create": 1,
+   "delete": 1,
+   "email": 1,
+   "print": 1,
+   "read": 1,
+   "role": "System Manager",
+   "share": 1,
+   "write": 1
+  }
+ ],
+ "row_format": "Dynamic",
+ "sort_field": "creation",
+ "sort_order": "DESC",
+ "states": []
+}
