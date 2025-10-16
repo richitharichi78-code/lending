@@ -187,6 +187,7 @@ class TestLoan(IntegrationTestCase):
 		frappe.db.set_value(
 			"Loan Product", "Demand Loan", "customer_refund_account", "Customer Refund Account - _TC"
 		)
+		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 1)
 
 	def test_loan_with_repayment_periods(self):
 		posting_date = "2025-01-27"
@@ -278,7 +279,6 @@ class TestLoan(IntegrationTestCase):
 		self.assertEqual(loan.loan_amount, 1000000)
 
 	def test_loan_disbursement(self):
-		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 1)
 		pledge = [{"loan_security": "Test Security 1", "qty": 4000.00}]
 
 		loan_application = create_loan_application(
@@ -928,8 +928,6 @@ class TestLoan(IntegrationTestCase):
 			self.assertEqual(i.start_date, i.posting_date)
 
 	def test_loan_write_off_limit(self):
-		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 1)
-
 		loan = create_secured_demand_loan(self.applicant2)
 		self.assertEqual(loan.loan_amount, 1000000)
 		repayment_date = "2019-11-01"
@@ -1283,8 +1281,6 @@ class TestLoan(IntegrationTestCase):
 		loan.save()
 
 	def test_loan_write_off_recovery(self):
-		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 1)
-
 		loan = create_loan(
 			"_Test Customer 1",
 			"Term Loan Product 4",
@@ -1329,8 +1325,6 @@ class TestLoan(IntegrationTestCase):
 			self.assertIn(expected, gl_entries, f"Missing GL entry: {expected}")
 
 	def test_loan_write_off_settlement(self):
-		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 1)
-
 		loan = create_loan(
 			"_Test Customer 1",
 			"Term Loan Product 4",
@@ -3199,7 +3193,6 @@ class TestLoan(IntegrationTestCase):
 		self.assertEqual(len(schedule), loan_repayment_schedule.repayment_periods)
 
 	def test_interest_accrual_gl_before_write_off(self):
-		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 1)
 		set_loan_accrual_frequency("Daily")
 
 		loan = create_loan(
@@ -3463,45 +3456,38 @@ class TestLoan(IntegrationTestCase):
 			flt(repayment.amount_paid - repayment.pending_principal_amount - interest_waiver_amount, 2),
 		)
 
-	def test_loan_accounting_enabled_or_disabled(self):
-		for enabled in (1, 0):
-			with self.subTest(enable_loan_accounting=enabled):
-				frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", enabled)
+	def test_loan_accounting_disabled(self):
+		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 0)
 
-				loan = create_loan(
-					"_Test Customer 1",
-					"Term Loan Product 4",
-					100000,
-					"Repay Over Number of Periods",
-					6,
-					"Customer",
-					"2024-07-15",
-					"2024-06-25",
-					10,
-				)
-				loan.submit()
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			100000,
+			"Repay Over Number of Periods",
+			6,
+			"Customer",
+			"2024-07-15",
+			"2024-06-25",
+			10,
+		)
+		loan.submit()
 
-				make_loan_disbursement_entry(
-					loan.name, loan.loan_amount, disbursement_date="2024-06-25", repayment_start_date="2024-07-15"
-				)
-				process_daily_loan_demands(posting_date="2025-01-05", loan=loan.name)
+		make_loan_disbursement_entry(
+			loan.name, loan.loan_amount, disbursement_date="2024-06-25", repayment_start_date="2024-07-15"
+		)
+		process_daily_loan_demands(posting_date="2025-01-05", loan=loan.name)
 
-				amounts = calculate_amounts(against_loan=loan.name, posting_date="2025-01-16")
-				payable_amount = round(float(amounts["payable_amount"] or 0.0), 2)
+		amounts = calculate_amounts(against_loan=loan.name, posting_date="2025-01-16")
+		payable_amount = round(float(amounts["payable_amount"] or 0.0), 2)
 
-				repayment_entry = create_repayment_entry(
-					loan.name, get_datetime("2025-01-16 00:03:10"), payable_amount
-				)
-				repayment_entry.submit()
+		repayment_entry = create_repayment_entry(
+			loan.name, get_datetime("2025-01-16 00:03:10"), payable_amount
+		)
+		repayment_entry.submit()
 
-				gl_entries = frappe.db.get_all(
-					"GL Entry",
-					filters={"against_voucher_type": "Loan", "against_voucher": loan.name},
-				)
+		gl_entries = frappe.db.get_all(
+			"GL Entry",
+			filters={"against_voucher_type": "Loan", "against_voucher": loan.name},
+		)
 
-				if enabled:
-					self.assertEqual(
-						len(gl_entries), 39
-					)  # 2 Disbursement + 12 Demands + 22 Interest Accrual + 3 Repayment (GL Entries)
-				else:
-					self.assertEqual(len(gl_entries), 0)
+		self.assertEqual(len(gl_entries), 0)

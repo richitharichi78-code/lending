@@ -32,7 +32,6 @@ from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
-from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
@@ -129,9 +128,6 @@ class Loan(AccountsController):
 		written_off_amount: DF.Currency
 	# end: auto-generated types
 
-	def before_validate(self):
-		self.set_optional_accounts()
-
 	def validate(self):
 		self.set_status()
 		self.set_loan_amount()
@@ -192,33 +188,6 @@ class Loan(AccountsController):
 
 			if not self.cost_center:
 				frappe.throw(_("Cost center is mandatory for loans having rate of interest greater than 0"))
-
-	def set_optional_accounts(self):
-		if not loan_accounting_enabled(self.company):
-			return
-
-		required_fields = [
-			"disbursement_account",
-			"payment_account",
-			"loan_account",
-			"interest_income_account",
-			"penalty_income_account",
-		]
-
-		missing = []
-		for f in required_fields:
-			if not self.get(f):
-				label = self.meta.get_label(f)
-				missing.append(label)
-
-		if missing:
-			frappe.throw(
-				_("{0} {1} mandatory when Loan Accounting is enabled for {2}").format(
-					", ".join(frappe.bold(m) for m in missing),
-					"are" if len(missing) > 1 else "is",
-					frappe.bold(self.company),
-				)
-			)
 
 	def set_cyclic_date(self):
 		if (

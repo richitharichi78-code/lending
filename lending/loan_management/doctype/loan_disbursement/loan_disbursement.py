@@ -19,10 +19,10 @@ from frappe.utils import (
 )
 
 import erpnext
-from erpnext.accounts.general_ledger import make_gl_entries, process_gl_map
-from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.accounts.general_ledger import process_gl_map
 from erpnext.controllers.sales_and_purchase_return import make_return_doc
 
+from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan.loan import get_cyclic_date
 from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log import (
 	create_loan_limit_change_log,
@@ -40,11 +40,10 @@ from lending.loan_management.doctype.loan_security_release.loan_security_release
 from lending.loan_management.doctype.process_loan_interest_accrual.process_loan_interest_accrual import (
 	process_loan_interest_accrual_for_loans,
 )
-from lending.loan_management.utils import loan_accounting_enabled
 
 
 # nosemgrep
-class LoanDisbursement(AccountsController):
+class LoanDisbursement(LoanController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -185,8 +184,7 @@ class LoanDisbursement(AccountsController):
 		update_loan_securities_values(self.against_loan, self.disbursed_amount, self.doctype)
 		self.create_loan_limit_change_log()
 		self.withheld_security_deposit()
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries()
+		self.make_gl_entries()
 
 	def set_status(self):
 		if self.docstatus == 0:
@@ -315,9 +313,7 @@ class LoanDisbursement(AccountsController):
 			on_trigger_doc_cancel=1,
 		)
 
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries(cancel=1)
-
+		self.make_gl_entries(cancel=1)
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 		self.set_status()
 
@@ -745,7 +741,7 @@ class LoanDisbursement(AccountsController):
 			if cancel:
 				gle_map = process_gl_map(gle_map)
 
-			make_gl_entries(gle_map, cancel=cancel, adv_adj=adv_adj)
+			super().make_gl_entries(gle_map, cancel=cancel, adv_adj=adv_adj)
 
 
 def make_sales_invoice_for_charge(

@@ -12,13 +12,9 @@ from frappe.query_builder.functions import Coalesce, Max, Round, Sum
 from frappe.utils import add_days, cint, flt, get_datetime, getdate, random_string
 
 import erpnext
-from erpnext.accounts.general_ledger import (
-	make_gl_entries,
-	make_reverse_gl_entries,
-	process_gl_map,
-)
-from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.accounts.general_ledger import make_reverse_gl_entries, process_gl_map
 
+from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log import (
 	create_loan_limit_change_log,
 )
@@ -28,10 +24,9 @@ from lending.loan_management.doctype.loan_security_assignment.loan_security_assi
 from lending.loan_management.doctype.loan_security_shortfall.loan_security_shortfall import (
 	update_shortfall_status,
 )
-from lending.loan_management.utils import loan_accounting_enabled
 
 
-class LoanRepayment(AccountsController):
+class LoanRepayment(LoanController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -274,8 +269,7 @@ class LoanRepayment(AccountsController):
 		update_loan_securities_values(self.against_loan, self.principal_amount_paid, self.doctype)
 		self.create_loan_limit_change_log()
 
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries()
+		self.make_gl_entries()
 
 		if (
 			self.is_term_loan
@@ -703,8 +697,7 @@ class LoanRepayment(AccountsController):
 			"Loan Adjustment",
 		]
 
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries(cancel=1)
+		self.make_gl_entries(cancel=1)
 
 		self.post_suspense_entries(cancel=1)
 
@@ -1924,7 +1917,7 @@ class LoanRepayment(AccountsController):
 			merge_entries = False
 
 		if gle_map:
-			make_gl_entries(gle_map, merge_entries=merge_entries, cancel=cancel, adv_adj=adv_adj)
+			super().make_gl_entries(gle_map, merge_entries=merge_entries, cancel=cancel, adv_adj=adv_adj)
 
 	def get_gl_map(self):
 		precision = cint(frappe.db.get_default("currency_precision")) or 2
