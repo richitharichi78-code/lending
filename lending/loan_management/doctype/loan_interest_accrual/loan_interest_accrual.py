@@ -20,15 +20,12 @@ from frappe.utils import (
 	nowdate,
 )
 
-from erpnext.accounts.general_ledger import make_gl_entries
-from erpnext.controllers.accounts_controller import AccountsController
-
+from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_demand.loan_demand import create_loan_demand
-from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
-class LoanInterestAccrual(AccountsController):
+class LoanInterestAccrual(LoanController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -123,8 +120,7 @@ class LoanInterestAccrual(AccountsController):
 	def on_submit(self):
 		from lending.loan_management.doctype.loan.loan import make_suspense_journal_entry
 
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries()
+		self.make_gl_entries()
 
 		if self.is_npa and not self.unmark_npa:
 			if self.interest_type == "Normal Interest":
@@ -150,8 +146,7 @@ class LoanInterestAccrual(AccountsController):
 				self.db_set("additional_interest_suspense_entry", additional_interest_jv)
 
 	def on_cancel(self):
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries(cancel=1)
+		self.make_gl_entries(cancel=1)
 
 		if self.normal_interest_journal_entry:
 			doc = frappe.get_doc("Journal Entry", self.normal_interest_journal_entry)
@@ -317,7 +312,7 @@ class LoanInterestAccrual(AccountsController):
 			)
 
 		if gle_map:
-			make_gl_entries(gle_map, cancel=cancel, adv_adj=adv_adj, merge_entries=False)
+			super().make_gl_entries(gle_map, cancel=cancel, adv_adj=adv_adj, merge_entries=False)
 
 
 # For Eg: If Loan disbursement date is '01-09-2019' and disbursed amount is 1000000 and

@@ -6,16 +6,14 @@ from frappe import _
 from frappe.utils import add_days, nowdate
 
 import erpnext
-from erpnext.accounts.general_ledger import make_gl_entries
-from erpnext.controllers.accounts_controller import AccountsController
 
+from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.process_loan_interest_accrual.process_loan_interest_accrual import (
 	process_loan_interest_accrual_for_loans,
 )
-from lending.loan_management.utils import loan_accounting_enabled
 
 
-class LoanBalanceAdjustment(AccountsController):
+class LoanBalanceAdjustment(LoanController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -55,14 +53,11 @@ class LoanBalanceAdjustment(AccountsController):
 
 	def on_submit(self):
 		self.set_status_and_amounts()
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries()
+		self.make_gl_entries()
 
 	def on_cancel(self):
 		self.set_status_and_amounts(cancel=1)
-
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries(cancel=1)
+		self.make_gl_entries(cancel=1)
 
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 
@@ -181,4 +176,4 @@ class LoanBalanceAdjustment(AccountsController):
 		gle_map.append(self.get_gl_dict(company_entry))
 
 		if gle_map:
-			make_gl_entries(gle_map, cancel=cancel, adv_adj=adv_adj, merge_entries=False)
+			super().make_gl_entries(gle_map, cancel=cancel, adv_adj=adv_adj, merge_entries=False)

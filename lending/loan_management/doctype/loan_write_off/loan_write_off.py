@@ -9,16 +9,14 @@ from frappe.query_builder import functions as fn
 from frappe.utils import cint, flt, getdate
 
 import erpnext
-from erpnext.accounts.general_ledger import make_gl_entries
-from erpnext.controllers.accounts_controller import AccountsController
 
+from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_repayment.loan_repayment import (
 	get_pending_principal_amount,
 )
-from lending.loan_management.utils import loan_accounting_enabled
 
 
-class LoanWriteOff(AccountsController):
+class LoanWriteOff(LoanController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -113,8 +111,7 @@ class LoanWriteOff(AccountsController):
 		if not self.is_settlement_write_off:
 			make_loan_waivers(self.loan, self.value_date)
 
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries()
+		self.make_gl_entries()
 
 		self.cancel_suspense_entries()
 		write_off_charges(self.loan, self.posting_date, self.value_date, self.company, on_write_off=True)
@@ -160,8 +157,7 @@ class LoanWriteOff(AccountsController):
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 		self.cancel_waiver_entries()
 
-		if loan_accounting_enabled(self.company):
-			self.make_gl_entries(cancel=1)
+		self.make_gl_entries(cancel=1)
 
 		self.close_employee_loan(cancel=1)
 		self.update_outstanding_amount_and_status(cancel=1)
@@ -237,7 +233,7 @@ class LoanWriteOff(AccountsController):
 			)
 		)
 
-		make_gl_entries(gl_entries, cancel=cancel, merge_entries=False)
+		super().make_gl_entries(gl_entries, cancel=cancel, merge_entries=False)
 
 	def close_employee_loan(self, cancel=0):
 		if not self.applicant_type == "Employee":
