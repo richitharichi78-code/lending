@@ -121,7 +121,6 @@ class LoanInterestAccrual(LoanController):
 		from lending.loan_management.doctype.loan.loan import make_suspense_journal_entry
 
 		self.make_gl_entries()
-
 		if self.is_npa and not self.unmark_npa:
 			if self.interest_type == "Normal Interest":
 				is_penal = False

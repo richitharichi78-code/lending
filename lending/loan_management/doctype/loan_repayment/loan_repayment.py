@@ -268,7 +268,6 @@ class LoanRepayment(LoanController):
 
 		update_loan_securities_values(self.against_loan, self.principal_amount_paid, self.doctype)
 		self.create_loan_limit_change_log()
-
 		self.make_gl_entries()
 
 		if (
@@ -696,9 +695,7 @@ class LoanRepayment(LoanController):
 			"Loan Repayment Repost",
 			"Loan Adjustment",
 		]
-
 		self.make_gl_entries(cancel=1)
-
 		self.post_suspense_entries(cancel=1)
 
 		if not self.is_write_off_waiver:

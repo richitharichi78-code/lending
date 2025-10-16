@@ -112,7 +112,6 @@ class LoanWriteOff(LoanController):
 			make_loan_waivers(self.loan, self.value_date)
 
 		self.make_gl_entries()
-
 		self.cancel_suspense_entries()
 		write_off_charges(self.loan, self.posting_date, self.value_date, self.company, on_write_off=True)
 		self.close_employee_loan()
@@ -156,9 +155,7 @@ class LoanWriteOff(LoanController):
 	def on_cancel(self):
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 		self.cancel_waiver_entries()
-
 		self.make_gl_entries(cancel=1)
-
 		self.close_employee_loan(cancel=1)
 		self.update_outstanding_amount_and_status(cancel=1)
 

@@ -4,7 +4,9 @@ import frappe
 from frappe import _
 from frappe.utils import cint, flt
 
-from erpnext.accounts.doctype.sales_invoice.sales_invoice import SalesInvoice
+from erpnext.accounts.doctype.sales_invoice.sales_invoice import (
+	SalesInvoice as ERPNextSalesInvoice,
+)
 from erpnext.accounts.general_ledger import make_gl_entries
 
 from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
@@ -13,16 +15,18 @@ from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual
 from lending.loan_management.utils import loan_accounting_enabled
 
 
-class CustomSalesInvoice(SalesInvoice):
+class SalesInvoice(ERPNextSalesInvoice):
 	def make_gl_entries(self, *args, **kwargs):
-		if loan_accounting_enabled(self.company):
-			super().make_gl_entries(*args, **kwargs)
-		self.set_status(update=True)
+		if not loan_accounting_enabled(self.company):
+			self.set_status(update=True)
+			return
+		super().make_gl_entries(*args, **kwargs)
 
 	def make_gl_entries_on_cancel(self, *args, **kwargs):
-		if loan_accounting_enabled(self.company):
-			super().make_gl_entries_on_cancel(*args, **kwargs)
-		self.set_status(update=True)
+		if not loan_accounting_enabled(self.company):
+			self.set_status(update=True)
+			return
+		super().make_gl_entries_on_cancel(*args, **kwargs)
 
 
 def generate_demand(self, method=None):

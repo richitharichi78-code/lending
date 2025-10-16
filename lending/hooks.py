@@ -134,8 +134,8 @@ before_uninstall = "lending.install.before_uninstall"
 # Override standard doctype classes
 
 override_doctype_class = {
-	"Sales Invoice": "lending.overrides.sales_invoice.CustomSalesInvoice",
-	"Journal Entry": "lending.overrides.journal_entry.CustomJournalEntry",
+	"Sales Invoice": "lending.overrides.sales_invoice.SalesInvoice",
+	"Journal Entry": "lending.overrides.journal_entry.JournalEntry",
 }
 
 # Document Events
