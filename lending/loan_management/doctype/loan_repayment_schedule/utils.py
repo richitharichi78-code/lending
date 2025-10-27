@@ -26,6 +26,19 @@ def get_monthly_repayment_amount(loan_amount, rate_of_interest, repayment_period
 	return monthly_repayment_amount
 
 
+def get_flat_monthly_repayment_amount(loan_amount, rate_of_interest, repayment_periods, frequency):
+	if frequency == "Monthly":
+		years = 12
+	else:
+		years = 1
+
+	total_interest = (loan_amount * rate_of_interest * repayment_periods) / (years * 100)
+	total_amount = loan_amount + total_interest
+	monthly_repayment_amount = math.ceil(flt(total_amount) / repayment_periods)
+
+	return monthly_repayment_amount
+
+
 def get_frequency(frequency):
 	return {
 		"Monthly": 12,
@@ -51,6 +64,8 @@ def get_amounts(
 	previous_interest_amount=0,
 	additional_principal_amount=0,
 	pending_prev_days=0,
+	flat_rate=False,
+	loan_amount=0,
 ):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
 
@@ -60,9 +75,12 @@ def get_amounts(
 	else:
 		current_balance_amount = balance_amount
 
-	interest_amount = flt(
-		current_balance_amount * flt(rate_of_interest) * days / (months * 100), precision
-	)
+	if flat_rate:
+		interest_amount = flt(loan_amount * flt(rate_of_interest) * days / (months * 100), precision)
+	else:
+		interest_amount = flt(
+			current_balance_amount * flt(rate_of_interest) * days / (months * 100), precision
+		)
 
 	principal_amount = monthly_repayment_amount - flt(interest_amount)
 
