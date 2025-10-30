@@ -250,7 +250,7 @@ class LoanInterestAccrual(LoanController):
 								self.last_accrual_date, self.posting_date, self.loan
 							),
 							"cost_center": cost_center,
-							"posting_date": self.accrual_date,
+							"posting_date": self.accrual_date if self.docstatus == 1 else getdate(),
 						}
 					)
 				)
@@ -268,7 +268,7 @@ class LoanInterestAccrual(LoanController):
 								self.last_accrual_date, self.posting_date, self.loan
 							),
 							"cost_center": cost_center,
-							"posting_date": self.accrual_date,
+							"posting_date": self.accrual_date if self.docstatus == 1 else getdate(),
 						}
 					)
 				)
@@ -287,7 +287,7 @@ class LoanInterestAccrual(LoanController):
 							self.last_accrual_date, self.posting_date, self.loan
 						),
 						"cost_center": cost_center,
-						"posting_date": self.accrual_date,
+						"posting_date": self.accrual_date if self.docstatus == 1 else getdate(),
 					}
 				)
 			)
@@ -305,7 +305,7 @@ class LoanInterestAccrual(LoanController):
 							self.last_accrual_date, self.posting_date, self.loan
 						),
 						"cost_center": cost_center,
-						"posting_date": self.accrual_date,
+						"posting_date": self.accrual_date if self.docstatus == 1 else getdate(),
 					}
 				)
 			)
