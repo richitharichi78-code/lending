@@ -72,6 +72,7 @@ class Loan(AccountsController):
 		freeze_account: DF.Check
 		freeze_date: DF.Date | None
 		interest_income_account: DF.Link
+		is_imported: DF.Check
 		is_npa: DF.Check
 		is_secured_loan: DF.Check
 		is_term_loan: DF.Check
@@ -82,6 +83,7 @@ class Loan(AccountsController):
 		loan_application: DF.Link | None
 		loan_category: DF.Link | None
 		loan_charges: DF.Table[LoanDisbursementCharge]
+		loan_id: DF.Data | None
 		loan_partner: DF.Link | None
 		loan_product: DF.Link
 		loan_restructure_count: DF.Int
@@ -127,6 +129,10 @@ class Loan(AccountsController):
 		watch_period_end_date: DF.Date | None
 		written_off_amount: DF.Currency
 	# end: auto-generated types
+
+	def autoname(self):
+		if self.get("is_imported") and self.get("loan_id"):
+			self.name = self.loan_id
 
 	def validate(self):
 		self.set_status()

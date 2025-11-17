@@ -17,6 +17,8 @@
   "company",
   "posting_date",
   "status",
+  "loan_id",
+  "is_imported",
   "section_break_8",
   "loan_product",
   "loan_amount",
@@ -705,12 +707,25 @@
   {
    "fieldname": "column_break_qsfx",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "loan_id",
+   "fieldtype": "Data",
+   "label": "Loan ID",
+   "read_only": 1
+  },
+  {
+   "default": "0",
+   "fieldname": "is_imported",
+   "fieldtype": "Check",
+   "label": "Is Imported",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-06-23 16:14:48.341833",
+ "modified": "2025-11-13 12:21:08.072117",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",
@@ -737,6 +752,7 @@
    "role": "Employee"
   }
  ],
+ "row_format": "Dynamic",
  "search_fields": "posting_date",
  "sort_field": "creation",
  "sort_order": "DESC",

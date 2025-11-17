@@ -34,6 +34,7 @@
   "outstanding_amount",
   "accounting_dimensions_section",
   "cost_center",
+  "is_imported",
   "column_break_hmrs",
   "amended_from",
   "process_loan_demand",
@@ -283,13 +284,20 @@
    "fieldtype": "Link",
    "label": "Loan Repayment",
    "options": "Loan Repayment"
+  },
+  {
+   "default": "0",
+   "fieldname": "is_imported",
+   "fieldtype": "Check",
+   "label": "Is Imported",
+   "read_only": 1
   }
  ],
  "in_create": 1,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-28 12:22:19.596834",
+ "modified": "2025-11-17 10:48:04.460213",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Demand",

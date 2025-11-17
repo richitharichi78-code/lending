@@ -50,6 +50,7 @@ class LoanInterestAccrual(AccountsController):
 		cost_center: DF.Link | None
 		interest_amount: DF.Currency
 		interest_type: DF.Literal["Normal Interest", "Penal Interest"]
+		is_imported: DF.Check
 		is_npa: DF.Check
 		is_term_loan: DF.Check
 		last_accrual_date: DF.Date | None

@@ -73,6 +73,7 @@ class LoanDisbursement(AccountsController):
 		disbursed_amount: DF.Currency
 		disbursement_account: DF.Link | None
 		disbursement_date: DF.Date
+		is_imported: DF.Check
 		is_term_loan: DF.Check
 		loan_account: DF.Link | None
 		loan_disbursement_charges: DF.Table[LoanDisbursementCharge]

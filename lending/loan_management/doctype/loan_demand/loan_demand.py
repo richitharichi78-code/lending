@@ -31,6 +31,7 @@ class LoanDemand(AccountsController):
 		demand_type: DF.Literal["EMI", "Penalty", "Normal", "Charges", "BPI", "Additional Interest"]
 		disbursement_date: DF.Date | None
 		invoice_date: DF.Date | None
+		is_imported: DF.Check
 		is_term_loan: DF.Check
 		loan: DF.Link | None
 		loan_disbursement: DF.Link | None
