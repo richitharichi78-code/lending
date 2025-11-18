@@ -709,6 +709,7 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "is_imported",
    "fieldname": "loan_id",
    "fieldtype": "Data",
    "label": "Loan ID",
@@ -725,7 +726,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-13 12:21:08.072117",
+ "modified": "2025-11-18 11:16:12.017321",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

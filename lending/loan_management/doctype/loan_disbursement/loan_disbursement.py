@@ -77,6 +77,7 @@ class LoanDisbursement(AccountsController):
 		is_term_loan: DF.Check
 		loan_account: DF.Link | None
 		loan_disbursement_charges: DF.Table[LoanDisbursementCharge]
+		loan_disbursement_id: DF.Data | None
 		loan_partner: DF.Link | None
 		loan_product: DF.Link | None
 		mode_of_payment: DF.Link | None
@@ -97,6 +98,10 @@ class LoanDisbursement(AccountsController):
 		tenure: DF.Int
 		withhold_security_deposit: DF.Check
 	# end: auto-generated types
+
+	def autoname(self):
+		if self.get("is_imported") and self.get("loan_disbursement_id"):
+			self.name = self.loan_disbursement_id
 
 	def validate(self):
 		self.set_status()

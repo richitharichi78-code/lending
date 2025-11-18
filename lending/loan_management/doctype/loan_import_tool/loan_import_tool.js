@@ -22,9 +22,10 @@ frappe.ui.form.on("Loan Import Tool", {
 							message: __("Loan import completed with some errors. Check Error Log for details."),
 							indicator: "orange"
 						});
-					} else {
-						frappe.msgprint(__("Loan import has been completed successfully!"));
 					}
+					// else {
+					// 	frappe.msgprint(__("Loan import has been completed successfully!"));
+					// }
 				}, 1500);
 				return;
 			}
@@ -114,9 +115,9 @@ frappe.ui.form.on("Loan Import Tool", {
 				"loan_id", "applicant_type", "applicant", "loan_product", "loan_amount",
 				"posting_date", "company", "repayment_method", "repayment_frequency",
 				"repayment_periods", "rate_of_interest", "penalty_charges_rate",
-				"disbursement_date", "repayment_start_date", "total_principal_paid",
+				"disbursement_date", "disbursed_amount", "repayment_start_date", "total_principal_paid",
 				"total_interest_payable", "total_payment", "written_off_amount", "status"
-			]
+			],
 		};
 
 		if (custom_fields && custom_fields.length > 0) {
