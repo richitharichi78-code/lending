@@ -56,12 +56,16 @@ frappe.ui.form.on("Loan Import Tool", {
 			});
 		});
 
-		frm.add_custom_button(__("Download Template"), () => {
-			frm.trigger("download_template");
-		});
+		frm.add_custom_button(__("Download Loan Template"), () => {
+			frm.events.download_template(frm, "Loan");
+		}, (__("Download Template")));
+
+		frm.add_custom_button(__("Download Loan Repayment Template"), () => {
+			frm.events.download_template(frm, "Loan Repayment");
+		}, (__("Download Template")));
 	},
 
-	download_template: function(frm) {
+	show_custom_fields_dialog: function(frm, target_doctype, callback) {
 		const dialog = new frappe.ui.Dialog({
 			title: __('Select Fields for Template'),
 			fields: [
@@ -79,9 +83,10 @@ frappe.ui.form.on("Loan Import Tool", {
 			],
 			primary_action_label: __('Download Template'),
 			primary_action: function() {
-				const selected_fields = dialog.get_values().custom_fields || [];
+				const values = dialog.get_values() || {};
+				const selected_fields = values.custom_fields || [];
 				dialog.hide();
-				frm.events.download_template_with_selected_fields(frm, selected_fields);
+				callback(selected_fields);
 			}
 		});
 
@@ -89,7 +94,7 @@ frappe.ui.form.on("Loan Import Tool", {
 			method: "frappe.client.get_list",
 			args: {
 				doctype: "Custom Field",
-				filters: { dt: "Loan" },
+				filters: { dt: target_doctype },
 				fields: ["fieldname", "label"]
 			},
 			callback: function(r) {
@@ -108,9 +113,26 @@ frappe.ui.form.on("Loan Import Tool", {
 		});
 	},
 
-	download_template_with_selected_fields: function(frm, custom_fields) {
+	download_template_with_selected_fields: function(frm, target_doctype, base_fields, custom_fields) {
 		const method = "/api/method/lending.loan_management.doctype.loan_import_tool.loan_import_tool.loan_template_download";
-		const export_fields = {
+
+		const export_fields = {};
+		export_fields[target_doctype] = (base_fields || []).slice();
+
+		if (custom_fields && custom_fields.length > 0) {
+			export_fields[target_doctype] = export_fields[target_doctype].concat(custom_fields);
+		}
+
+		open_url_post(method, {
+			doctype: target_doctype,
+			import_type: frm.doc.import_type,
+			export_records: "blank_template",
+			export_fields: export_fields
+		});
+	},
+
+	download_template: function(frm, target_doctype) {
+		const base_fields_map = {
 			"Loan": [
 				"loan_id", "applicant_type", "applicant", "loan_product", "loan_amount",
 				"posting_date", "company", "repayment_method", "repayment_frequency",
@@ -118,17 +140,18 @@ frappe.ui.form.on("Loan Import Tool", {
 				"disbursement_date", "disbursed_amount", "repayment_start_date", "total_principal_paid",
 				"total_interest_payable", "total_payment", "written_off_amount", "status"
 			],
+			"Loan Repayment": [
+				"loan_repayment_id", "against_loan", "loan_disbursement", "repayment_type", "posting_date", "value_date",
+				"amount_paid", "principal_amount_paid", "total_interest_paid", "total_penalty_paid",
+				"total_charges_paid", "unbooked_interest_paid", "unbooked_penalty_paid", "excess_amount",
+				"payment_account", "loan_account", "bank_account", "reference_number", "reference_date", "manual_remarks"
+			]
 		};
 
-		if (custom_fields && custom_fields.length > 0) {
-			export_fields["Loan"] = export_fields["Loan"].concat(custom_fields);
-		}
+		const base_fields = base_fields_map[target_doctype] || [];
 
-		open_url_post(method, {
-			doctype: "Loan",
-			import_type: frm.doc.import_type,
-			export_records: "blank_template",
-			export_fields: export_fields
+		frm.events.show_custom_fields_dialog(frm, target_doctype, (selected_fields) => {
+			frm.events.download_template_with_selected_fields(frm, target_doctype, base_fields, selected_fields);
 		});
 	},
 

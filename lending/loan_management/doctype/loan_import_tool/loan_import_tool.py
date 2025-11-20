@@ -836,15 +836,16 @@ def loan_template_download(
 
 	static_fields = []
 	if import_type == "Mid Tenure Loans":
-		static_fields = [
-			"Loan Disbursement ID",
-			"Migration Date",
-			"Principal Outstanding Amount",
-			"Interest Outstanding Amount",
-			"Penalty Outstanding Amount",
-			"Additional Outstanding Amount",
-			"Charge Outstanding Amount",
-		]
+		if doctype == "Loan":
+			static_fields = [
+				"Loan Disbursement ID",
+				"Migration Date",
+				"Principal Outstanding Amount",
+				"Interest Outstanding Amount",
+				"Penalty Outstanding Amount",
+				"Additional Outstanding Amount",
+				"Charge Outstanding Amount",
+			]
 
 	exporter = Exporter(
 		doctype,
@@ -864,6 +865,10 @@ def loan_template_download(
 	writer = csv.writer(output)
 	writer.writerows(csv_array)
 
-	frappe.response.filename = "loan_import_template.csv"
+	if doctype == "Loan":
+		frappe.response.filename = "loan_import_template.csv"
+	else:
+		frappe.response.filename = "loan_repayment_import_template.csv"
+
 	frappe.response.filecontent = output.getvalue().encode("utf-8")
 	frappe.response.type = "download"

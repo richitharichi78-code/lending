@@ -64,6 +64,7 @@ class LoanRepayment(AccountsController):
 		excess_amount: DF.Currency
 		interest_payable: DF.Currency
 		is_backdated: DF.Check
+		is_imported: DF.Check
 		is_npa: DF.Check
 		is_term_loan: DF.Check
 		is_write_off_waiver: DF.Check
@@ -76,6 +77,7 @@ class LoanRepayment(AccountsController):
 		loan_partner_repayment_schedule_type: DF.Data | None
 		loan_partner_share_percentage: DF.Percent
 		loan_product: DF.Link | None
+		loan_repayment_id: DF.Data | None
 		loan_restructure: DF.Link | None
 		manual_remarks: DF.SmallText | None
 		mode_of_payment: DF.Link | None
