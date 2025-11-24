@@ -38,21 +38,24 @@ frappe.ui.form.on("Loan Import Tool", {
 	refresh: function(frm) {
 		frm.disable_save();
 
-		frm.page.set_primary_action(__("Import Loans"), () => {
+		frm.page.set_primary_action(__("Import"), () => {
 			if (!frm.doc.import_file) {
 				frappe.msgprint(__("Please attach import file first"));
 				return;
 			}
 
-			frm.page.set_primary_action(__("Importing..."));
+			const action_label = frm.doc.import_for === "Loan Repayment" ? __("Importing Repayments...") : __("Importing Loans...");
+			const freeze_message = frm.doc.import_for === "Loan Repayment" ? __("Importing Loan Repayments...") : __("Importing Loan Repayments...");
+
+			frm.page.set_primary_action(action_label);
 
 			return frm.call({
 				doc: frm.doc,
-				method: "import_loans",
+				method: "import_data",
 				freeze: true,
-				freeze_message: __("Importing Loans...")
+				freeze_message: freeze_message
 			}).then(() => {
-				frm.page.set_primary_action(__("Import Loans"));
+				frm.page.set_primary_action(__("Import"));
 			});
 		});
 
@@ -114,7 +117,7 @@ frappe.ui.form.on("Loan Import Tool", {
 	},
 
 	download_template_with_selected_fields: function(frm, target_doctype, base_fields, custom_fields) {
-		const method = "/api/method/lending.loan_management.doctype.loan_import_tool.loan_import_tool.loan_template_download";
+		const method = "/api/method/lending.loan_management.doctype.loan_import_tool.loan_import_tool.download_template";
 
 		const export_fields = {};
 		export_fields[target_doctype] = (base_fields || []).slice();
@@ -125,6 +128,7 @@ frappe.ui.form.on("Loan Import Tool", {
 
 		open_url_post(method, {
 			doctype: target_doctype,
+			import_for: frm.doc.import_for,
 			import_type: frm.doc.import_type,
 			export_records: "blank_template",
 			export_fields: export_fields

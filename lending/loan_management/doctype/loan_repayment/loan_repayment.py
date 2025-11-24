@@ -127,9 +127,9 @@ class LoanRepayment(AccountsController):
 		value_date: DF.Datetime
 	# end: auto-generated types
 
-	def autoname(self):
-		if self.get("is_imported") and self.get("loan_repayment_id"):
-			self.name = self.loan_repayment_id
+	# def autoname(self):
+	# 	if self.get("is_imported") and self.get("loan_repayment_id"):
+	# 		self.name = self.loan_repayment_id
 
 	def before_validate(self):
 		self.set_repayment_account()

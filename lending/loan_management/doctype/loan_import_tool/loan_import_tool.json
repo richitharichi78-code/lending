@@ -9,6 +9,7 @@
   "company",
   "create_missing_customers",
   "column_break_vwno",
+  "import_for",
   "import_type",
   "import_file"
  ],
@@ -27,6 +28,7 @@
    "label": "Import File"
   },
   {
+   "depends_on": "eval:doc.import_for==\"Loan\";",
    "fieldname": "import_type",
    "fieldtype": "Select",
    "label": "Import Type",
@@ -42,6 +44,13 @@
   {
    "fieldname": "column_break_vwno",
    "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "import_for",
+   "fieldtype": "Select",
+   "label": "Import For",
+   "options": "Loan\nLoan Repayment",
+   "reqd": 1
   }
  ],
  "grid_page_length": 50,
@@ -49,7 +58,7 @@
  "index_web_pages_for_search": 1,
  "issingle": 1,
  "links": [],
- "modified": "2025-11-14 11:01:30.536749",
+ "modified": "2025-11-21 16:48:13.886478",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Import Tool",
