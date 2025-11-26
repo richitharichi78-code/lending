@@ -532,7 +532,7 @@ class LoanImportTool(Document):
 				}
 			)
 
-		self.add_dynamic_fields(loan, loan_row)
+		self.add_dynamic_fields(loan, loan_row, "Loan")
 		return loan
 
 	def prepare_loan_disbursement(self, loan_row, loan_doc, is_loc=False):
@@ -559,8 +559,8 @@ class LoanImportTool(Document):
 
 		return disbursement
 
-	def add_dynamic_fields(self, doc, row_data):
-		loan_meta = frappe.get_meta("Loan")
+	def add_dynamic_fields(self, doc, row_data, doctype=None):
+		loan_meta = frappe.get_meta(doctype)
 		existing_fields = set(doc.keys())
 
 		for field, value in row_data.items():
@@ -703,18 +703,20 @@ class LoanImportTool(Document):
 		return documents
 
 	def prepare_loan_repayment_doc(self, repayment_row):
-		"""Prepare single Loan Repayment document"""
-		applicant_type = frappe.db.get_value("Loan", repayment_row.get("against_loan"), "applicant_type")
-		applicant = frappe.db.get_value("Loan", repayment_row.get("against_loan"), "applicant")
-		loan_product = frappe.db.get_value("Loan", repayment_row.get("against_loan"), "loan_product")
+		loan_details = frappe.db.get_value(
+			"Loan",
+			repayment_row.get("against_loan"),
+			["applicant_type", "applicant", "loan_product", "company"],
+			as_dict=True,
+		)
 
 		repayment = {
 			"doctype": "Loan Repayment",
 			"loan_repayment_id": repayment_row.get("loan_repayment_id"),
 			"against_loan": repayment_row.get("against_loan"),
-			"applicant_type": applicant_type,
-			"applicant": applicant,
-			"loan_product": loan_product,
+			"applicant_type": loan_details.applicant_type,
+			"applicant": loan_details.applicant,
+			"loan_product": loan_details.loan_product,
 			"loan_disbursement": repayment_row.get("loan_disbursement"),
 			"repayment_type": repayment_row.get("repayment_type"),
 			"posting_date": repayment_row.get("posting_date"),
@@ -737,7 +739,7 @@ class LoanImportTool(Document):
 			"is_imported": 1,
 		}
 
-		self.add_dynamic_fields(repayment, repayment_row)
+		self.add_dynamic_fields(repayment, repayment_row, "Loan Repayment")
 		return repayment
 
 
@@ -753,10 +755,14 @@ def start_loan_repayment_import(repayment_data):
 		repayment_documents = loan_import_tool.prepare_loan_repayment_documents(repayment_data)
 
 		# Define fields for bulk insert
-		fields = [
+		repayment_meta = frappe.get_meta("Loan Repayment")
+		standard_fields = [
 			"name",
 			"loan_repayment_id",
 			"against_loan",
+			"applicant_type",
+			"applicant",
+			"loan_product",
 			"loan_disbursement",
 			"repayment_type",
 			"posting_date",
@@ -783,6 +789,13 @@ def start_loan_repayment_import(repayment_data):
 			"modified_by",
 		]
 
+		# Get custom fields
+		custom_fields = [
+			field.fieldname for field in repayment_meta.fields if field.fieldname.startswith("custom_")
+		]
+
+		all_fields = standard_fields + custom_fields
+
 		values = []
 		now = frappe.utils.now()
 		user = frappe.session.user
@@ -793,43 +806,50 @@ def start_loan_repayment_import(repayment_data):
 			# Generate name if not provided
 			name = repayment_dict.get("loan_repayment_id")
 
-			values.append(
-				(
-					name,
-					repayment_dict.get("loan_repayment_id"),
-					repayment_dict.get("against_loan"),
-					repayment_dict.get("loan_disbursement"),
-					repayment_dict.get("repayment_type", "Regular"),
-					repayment_dict.get("posting_date"),
-					repayment_dict.get("value_date"),
-					flt(repayment_dict.get("amount_paid", 0)),
-					flt(repayment_dict.get("principal_amount_paid", 0)),
-					flt(repayment_dict.get("total_interest_paid", 0)),
-					flt(repayment_dict.get("total_penalty_paid", 0)),
-					flt(repayment_dict.get("total_charges_paid", 0)),
-					flt(repayment_dict.get("unbooked_interest_paid", 0)),
-					flt(repayment_dict.get("unbooked_penalty_paid", 0)),
-					flt(repayment_dict.get("excess_amount", 0)),
-					repayment_dict.get("payment_account"),
-					repayment_dict.get("loan_account"),
-					repayment_dict.get("bank_account"),
-					repayment_dict.get("reference_number"),
-					repayment_dict.get("reference_date"),
-					repayment_dict.get("manual_remarks"),
-					repayment_dict.get("company"),
-					1,  # is_imported
-					now,  # creation
-					now,  # modified
-					user,  # owner
-					user,  # modified_by
-				)
+			# Build the value tuple dynamically including custom fields
+			value_tuple = (
+				name,
+				repayment_dict.get("loan_repayment_id"),
+				repayment_dict.get("against_loan"),
+				repayment_dict.get("applicant_type"),
+				repayment_dict.get("applicant"),
+				repayment_dict.get("loan_product"),
+				repayment_dict.get("loan_disbursement"),
+				repayment_dict.get("repayment_type", "Regular"),
+				repayment_dict.get("posting_date"),
+				repayment_dict.get("value_date"),
+				flt(repayment_dict.get("amount_paid", 0)),
+				flt(repayment_dict.get("principal_amount_paid", 0)),
+				flt(repayment_dict.get("total_interest_paid", 0)),
+				flt(repayment_dict.get("total_penalty_paid", 0)),
+				flt(repayment_dict.get("total_charges_paid", 0)),
+				flt(repayment_dict.get("unbooked_interest_paid", 0)),
+				flt(repayment_dict.get("unbooked_penalty_paid", 0)),
+				flt(repayment_dict.get("excess_amount", 0)),
+				repayment_dict.get("payment_account"),
+				repayment_dict.get("loan_account"),
+				repayment_dict.get("bank_account"),
+				repayment_dict.get("reference_number"),
+				repayment_dict.get("reference_date"),
+				repayment_dict.get("manual_remarks"),
+				repayment_dict.get("company"),
+				1,  # is_imported
+				now,  # creation
+				now,  # modified
+				user,  # owner
+				user,  # modified_by
 			)
 
+			# Add custom field values to the tuple
+			for custom_field in custom_fields:
+				value_tuple += (repayment_dict.get(custom_field),)
+
+			values.append(value_tuple)
 			created_repayments.append(name)
 
 		# Bulk insert
 		if values:
-			frappe.db.bulk_insert("Loan Repayment", fields=fields, values=values)
+			frappe.db.bulk_insert("Loan Repayment", fields=all_fields, values=values)
 			frappe.db.commit()
 
 			# Update status for created repayments

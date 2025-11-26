@@ -561,7 +561,7 @@
    "read_only": 1
   },
   {
-   "depends_on": "is_imported;",
+   "depends_on": "is_imported",
    "fieldname": "loan_repayment_id",
    "fieldtype": "Data",
    "label": "Loan Repayment ID",
@@ -571,7 +571,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-20 14:31:44.079949",
+ "modified": "2025-11-25 14:47:38.223065",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Repayment",
