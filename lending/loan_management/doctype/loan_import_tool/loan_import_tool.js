@@ -23,9 +23,6 @@ frappe.ui.form.on("Loan Import Tool", {
 							indicator: "orange"
 						});
 					}
-					// else {
-					// 	frappe.msgprint(__("Loan import has been completed successfully!"));
-					// }
 				}, 1500);
 				return;
 			}
@@ -66,6 +63,10 @@ frappe.ui.form.on("Loan Import Tool", {
 		frm.add_custom_button(__("Download Loan Repayment Template"), () => {
 			frm.events.download_template(frm, "Loan Repayment");
 		}, (__("Download Template")));
+
+		frm.add_custom_button(__("Loan Import Log"), () => {
+			frappe.set_route("List", "Loan Import Log");
+		});
 	},
 
 	show_custom_fields_dialog: function(frm, target_doctype, callback) {

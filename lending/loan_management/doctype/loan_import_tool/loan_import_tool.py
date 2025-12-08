@@ -3,6 +3,7 @@
 
 import csv
 import io
+import traceback
 from types import MethodType
 
 import frappe
@@ -147,7 +148,38 @@ class LoanImportTool(Document):
 
 		return loan_data
 
+	def validate_import_data(self, import_data):
+		validation_results = []
+
+		if self.import_for == "Loan":
+			validation_results = self.validate_loan_data(import_data)
+		else:
+			validation_results = self.validate_loan_repayment_data(import_data)
+
+		if validation_results:
+			for error in validation_results:
+				row = error["row"]
+				error_msg = error["error"]
+
+				if self.import_for == "Loan":
+					loan_id = import_data[row - 1].get("loan_id") if row - 1 < len(import_data) else f"Row {row}"
+					create_loan_import_log(
+						None,
+						None,
+						f"Validation Error - Row {row}",
+						"Failed",
+						error=error_msg,
+						against_loan=loan_id if loan_id and loan_id != f"Row {row}" else None,
+					)
+				else:
+					create_loan_import_log(None, None, f"Validation Error - Row {row}", "Failed", error=error_msg)
+
+			return validation_results
+
+		return []
+
 	def validate_loan_data(self, loan_data):
+		errors = []
 		required_fields = [
 			"loan_id",
 			"loan_disbursement_id",
@@ -185,22 +217,20 @@ class LoanImportTool(Document):
 			)
 
 		for i, loan in enumerate(loan_data):
+			row_errors = []
+
 			missing_fields = [field for field in required_fields if not loan.get(field)]
 			if missing_fields:
-				frappe.throw(
-					_("Row {0}: Following fields are required: {1}").format(i + 1, ", ".join(missing_fields))
-				)
+				row_errors.append(_("Following fields are required: {0}").format(", ".join(missing_fields)))
 
 			existing_loan_id = loan.get("loan_id")
 			if existing_loan_id and frappe.db.exists("Loan", existing_loan_id):
-				frappe.throw(_("Row {0}: Loan ID '{1}' already exists").format(i + 1, existing_loan_id))
+				row_errors.append(_("Loan ID '{0}' already exists").format(existing_loan_id))
 
 			existing_disbursement_id = loan.get("loan_disbursement_id")
 			if existing_disbursement_id and frappe.db.exists("Loan Disbursement", existing_disbursement_id):
-				frappe.throw(
-					_("Row {0}: Loan Disbursement ID '{1}' already exists").format(
-						i + 1, existing_disbursement_id
-					)
+				row_errors.append(
+					_("Loan Disbursement ID '{0}' already exists").format(existing_disbursement_id)
 				)
 
 			if not loan.get("company"):
@@ -208,17 +238,30 @@ class LoanImportTool(Document):
 
 			applicant_type = loan.get("applicant_type", "Customer")
 			applicant = loan.get("applicant")
-
 			if applicant and not frappe.db.exists(applicant_type, applicant):
 				if self.create_missing_customers and applicant_type == "Customer":
-					self.create_customer(applicant)
+					try:
+						self.create_customer(applicant)
+					except Exception as e:
+						row_errors.append(_("Failed to create customer: {0}").format(str(e)))
 				else:
-					frappe.throw(_("Row {0}: {1} {2} does not exist").format(i + 1, applicant_type, applicant))
+					row_errors.append(_("{0} {1} does not exist").format(applicant_type, applicant))
 
-			self.validate_numeric_fields(loan, i)
-			self.validate_date_fields(loan, i)
+			numeric_errors = self.validate_numeric_fields(loan, i)
+			if numeric_errors:
+				row_errors.extend(numeric_errors)
+
+			date_errors = self.validate_date_fields(loan, i)
+			if date_errors:
+				row_errors.extend(date_errors)
+
+			for error in row_errors:
+				errors.append({"row": i + 1, "error": error})
+
+		return errors
 
 	def validate_numeric_fields(self, loan, index):
+		errors = []
 		numeric_fields = [
 			"loan_amount",
 			"disbursed_amount",
@@ -237,16 +280,30 @@ class LoanImportTool(Document):
 
 		for field in numeric_fields:
 			if loan.get(field):
-				flt(loan[field])
+				try:
+					flt(loan[field])
+				except ValueError:
+					errors.append(_("Invalid numeric value for field {0}").format(field))
+
+		return errors
 
 	def validate_date_fields(self, loan, index):
+		errors = []
 		if self.import_type == "Mid Tenure Loans" and loan.get("migration_date"):
-			getdate(loan["migration_date"])
+			try:
+				getdate(loan["migration_date"])
+			except Exception:
+				errors.append(_("Invalid date format for migration_date"))
 
 		date_fields = ["posting_date", "repayment_start_date", "disbursement_date", "migration_date"]
 		for field in date_fields:
 			if loan.get(field):
-				getdate(loan[field])
+				try:
+					getdate(loan[field])
+				except Exception:
+					errors.append(_("Invalid date format for field {0}").format(field))
+
+		return errors
 
 	def create_customer(self, customer_name):
 		customer = frappe.new_doc("Customer")
@@ -270,6 +327,9 @@ class LoanImportTool(Document):
 		)
 
 	def prepare_opening_gl_entry(self, loan_row, loan_name):
+		if self.import_type == "Closed Loans":
+			return None
+
 		loan_amount = flt(loan_row.get("loan_amount", 0))
 		total_principal_paid = flt(loan_row.get("total_principal_paid", 0))
 		outstanding_principal = loan_amount - total_principal_paid
@@ -336,7 +396,16 @@ class LoanImportTool(Document):
 
 		return [gl_entry_debit, gl_entry_credit]
 
+	def prepare_import_documents(self, import_data):
+		if self.import_for == "Loan":
+			return self.prepare_loan_documents(import_data)
+		else:
+			return self.prepare_loan_repayment_documents(import_data)
+
 	def prepare_loan_documents(self, loan_data):
+		if self.import_type == "Closed Loans":
+			return self.prepare_closed_loan_documents(loan_data)
+
 		all_documents = []
 		processed_loans = {}
 
@@ -345,7 +414,7 @@ class LoanImportTool(Document):
 			is_loc = self.is_loc_loan(loan_row.get("loan_product"))
 
 			if loan_id not in processed_loans:
-				loan_doc = self.prepare_loan_doc(loan_row, is_loc)
+				loan_doc = self.prepare_main_document(loan_row, "Loan", is_loc)
 				all_documents.append(loan_doc)
 				processed_loans[loan_id] = loan_doc
 			else:
@@ -355,27 +424,168 @@ class LoanImportTool(Document):
 			disbursement_doc["_loan_row"] = loan_row
 			all_documents.append(disbursement_doc)
 
-			if self.import_type == "Mid Tenure Loans":
-				loan_interest_accruals = self.prepare_loan_interest_accrual(
-					loan_row, loan_doc, disbursement_doc
-				)
-				all_documents.extend(loan_interest_accruals)
+			loan_interest_accruals = self.prepare_loan_interest_accrual(
+				loan_row, loan_doc, disbursement_doc
+			)
+			all_documents.extend(loan_interest_accruals)
 
-				loan_demands = self.prepare_loan_demand(loan_row, loan_doc, disbursement_doc)
-				all_documents.extend(loan_demands)
+			loan_demands = self.prepare_loan_demand(loan_row, loan_doc, disbursement_doc)
+			all_documents.extend(loan_demands)
 
-				gl_entries_placeholder = {
-					"doctype": "GL Entry",
-					"_is_gl_entry": True,
-					"_loan_row": loan_row,
-					"_loan_doc": loan_doc,
-					"_disbursement_doc": disbursement_doc,
-				}
-				all_documents.append(gl_entries_placeholder)
+			gl_entries_placeholder = {
+				"doctype": "GL Entry",
+				"_is_gl_entry": True,
+				"_loan_row": loan_row,
+				"_loan_doc": loan_doc,
+				"_disbursement_doc": disbursement_doc,
+			}
+			all_documents.append(gl_entries_placeholder)
 
 		return all_documents
 
+	def prepare_closed_loan_documents(self, loan_data):
+		all_documents = []
+		for index, loan_row in enumerate(loan_data):
+			loan_doc = self.prepare_main_document(loan_row, "Loan", False)
+			all_documents.append(loan_doc)
+		return all_documents
+
+	def prepare_loan_repayment_documents(self, repayment_data):
+		documents = []
+		for repayment_row in repayment_data:
+			repayment_doc = self.prepare_main_document(repayment_row, "Loan Repayment")
+			documents.append(repayment_doc)
+		return documents
+
+	def prepare_main_document(self, row_data, doctype, is_loc=False):
+		if doctype == "Loan":
+			return self._prepare_loan_doc(row_data, is_loc)
+		else:
+			return self._prepare_loan_repayment_doc(row_data)
+
+	def _prepare_loan_doc(self, loan_row, is_loc=False):
+		cost_center = frappe.db.get_value(
+			"Company", loan_row.get("company") or self.company, "cost_center"
+		)
+		if not cost_center:
+			frappe.throw(
+				_("Cost Center not defined for Company: {0}").format(loan_row.get("company") or self.company)
+			)
+
+		loan = {
+			"doctype": "Loan",
+			"loan_id": loan_row.get("loan_id"),
+			"company": loan_row.get("company") or self.company,
+			"loan_product": loan_row.get("loan_product"),
+			"applicant_type": loan_row.get("applicant_type", "Customer"),
+			"applicant": loan_row.get("applicant"),
+			"loan_amount": flt(loan_row.get("loan_amount")),
+			"rate_of_interest": flt(loan_row.get("rate_of_interest", 0)),
+			"penalty_charges_rate": flt(loan_row.get("penalty_charges_rate", 0)),
+			"posting_date": loan_row.get("posting_date"),
+			"is_term_loan": 1,
+			"status": loan_row.get("status", "Disbursed")
+			if self.import_type == "Mid Tenure Loans"
+			else "Closed",
+			"total_principal_paid": flt(loan_row.get("total_principal_paid", 0)),
+			"total_interest_payable": flt(loan_row.get("total_interest_payable", 0)),
+			"total_payment": flt(loan_row.get("total_payment", 0)),
+			"written_off_amount": flt(loan_row.get("written_off_amount", 0)),
+			"cost_center": cost_center,
+			"is_imported": 1,
+		}
+
+		if not is_loc:
+			loan.update(
+				{
+					"repayment_method": loan_row.get("repayment_method"),
+					"repayment_frequency": loan_row.get("repayment_frequency"),
+					"repayment_periods": loan_row.get("repayment_periods"),
+					"repayment_start_date": loan_row.get("repayment_start_date"),
+					"disbursement_date": loan_row.get("disbursement_date"),
+					"disbursed_amount": 0,
+				}
+			)
+		else:
+			loan.update(
+				{
+					"limit_applicable_start": loan_row.get("posting_date"),
+					"maximum_limit_amount": flt(loan_row.get("loan_amount")),
+					"disbursed_amount": 0,
+				}
+			)
+
+		self.add_dynamic_fields(loan, loan_row, "Loan")
+		return loan
+
+	def _prepare_loan_repayment_doc(self, repayment_row):
+		loan_details = frappe.db.get_value(
+			"Loan",
+			repayment_row.get("against_loan"),
+			["applicant_type", "applicant", "loan_product", "company"],
+			as_dict=True,
+		)
+
+		repayment = {
+			"doctype": "Loan Repayment",
+			"loan_repayment_id": repayment_row.get("loan_repayment_id"),
+			"against_loan": repayment_row.get("against_loan"),
+			"applicant_type": loan_details.applicant_type,
+			"applicant": loan_details.applicant,
+			"loan_product": loan_details.loan_product,
+			"loan_disbursement": repayment_row.get("loan_disbursement"),
+			"repayment_type": repayment_row.get("repayment_type"),
+			"posting_date": repayment_row.get("posting_date"),
+			"value_date": repayment_row.get("value_date") or repayment_row.get("posting_date"),
+			"amount_paid": flt(repayment_row.get("amount_paid", 0)),
+			"principal_amount_paid": flt(repayment_row.get("principal_amount_paid", 0)),
+			"total_interest_paid": flt(repayment_row.get("total_interest_paid", 0)),
+			"total_penalty_paid": flt(repayment_row.get("total_penalty_paid", 0)),
+			"total_charges_paid": flt(repayment_row.get("total_charges_paid", 0)),
+			"unbooked_interest_paid": flt(repayment_row.get("unbooked_interest_paid", 0)),
+			"unbooked_penalty_paid": flt(repayment_row.get("unbooked_penalty_paid", 0)),
+			"excess_amount": flt(repayment_row.get("excess_amount", 0)),
+			"payment_account": repayment_row.get("payment_account"),
+			"loan_account": repayment_row.get("loan_account"),
+			"bank_account": repayment_row.get("bank_account"),
+			"reference_number": repayment_row.get("reference_number"),
+			"reference_date": repayment_row.get("reference_date"),
+			"manual_remarks": repayment_row.get("manual_remarks"),
+			"company": self.company,
+			"is_imported": 1,
+		}
+
+		self.add_dynamic_fields(repayment, repayment_row, "Loan Repayment")
+		return repayment
+
+	def prepare_loan_disbursement(self, loan_row, loan_doc, is_loc=False):
+		disbursement = {
+			"doctype": "Loan Disbursement",
+			"loan_disbursement_id": loan_row.get("loan_disbursement_id"),
+			"company": loan_doc.get("company"),
+			"against_loan": loan_doc.get("loan_id"),
+			"disbursement_date": loan_row.get("disbursement_date"),
+			"disbursed_amount": flt(loan_row.get("disbursed_amount")),
+			"posting_date": loan_row.get("posting_date"),
+			"is_imported": 1,
+		}
+
+		if is_loc:
+			disbursement.update(
+				{
+					"repayment_method": loan_row.get("repayment_method"),
+					"repayment_frequency": loan_row.get("repayment_frequency"),
+					"repayment_periods": loan_row.get("repayment_periods"),
+					"repayment_start_date": loan_row.get("repayment_start_date"),
+				}
+			)
+
+		return disbursement
+
 	def prepare_loan_interest_accrual(self, loan_row, loan_doc, disbursement_doc):
+		if self.import_type == "Closed Loans":
+			return []
+
 		documents = []
 		migration_date = loan_row.get("migration_date")
 		if not migration_date:
@@ -439,6 +649,9 @@ class LoanImportTool(Document):
 		return documents
 
 	def prepare_loan_demand(self, loan_row, loan_doc, disbursement_doc):
+		if self.import_type == "Closed Loans":
+			return []
+
 		documents = []
 		migration_date = loan_row.get("migration_date")
 		if not migration_date:
@@ -480,85 +693,6 @@ class LoanImportTool(Document):
 
 		return documents
 
-	def prepare_loan_doc(self, loan_row, is_loc=False):
-		cost_center = frappe.db.get_value(
-			"Company", loan_row.get("company") or self.company, "cost_center"
-		)
-		if not cost_center:
-			frappe.throw(
-				_("Cost Center not defined for Company: {0}").format(loan_row.get("company") or self.company)
-			)
-
-		loan = {
-			"doctype": "Loan",
-			"loan_id": loan_row.get("loan_id"),
-			"company": loan_row.get("company") or self.company,
-			"loan_product": loan_row.get("loan_product"),
-			"applicant_type": loan_row.get("applicant_type", "Customer"),
-			"applicant": loan_row.get("applicant"),
-			"loan_amount": flt(loan_row.get("loan_amount")),
-			"rate_of_interest": flt(loan_row.get("rate_of_interest", 0)),
-			"penalty_charges_rate": flt(loan_row.get("penalty_charges_rate", 0)),
-			"posting_date": loan_row.get("posting_date"),
-			"is_term_loan": 1,
-			"status": loan_row.get("status", "Disbursed")
-			if self.import_type == "Mid Tenure Loans"
-			else "Closed",
-			"total_principal_paid": flt(loan_row.get("total_principal_paid", 0)),
-			"total_interest_payable": flt(loan_row.get("total_interest_payable", 0)),
-			"total_payment": flt(loan_row.get("total_payment", 0)),
-			"written_off_amount": flt(loan_row.get("written_off_amount", 0)),
-			"cost_center": cost_center,
-			"is_imported": 1,
-		}
-
-		if not is_loc:
-			loan.update(
-				{
-					"repayment_method": loan_row.get("repayment_method"),
-					"repayment_frequency": loan_row.get("repayment_frequency"),
-					"repayment_periods": loan_row.get("repayment_periods"),
-					"repayment_start_date": loan_row.get("repayment_start_date"),
-					"disbursement_date": loan_row.get("disbursement_date"),
-					"disbursed_amount": 0,
-				}
-			)
-		else:
-			loan.update(
-				{
-					"limit_applicable_start": loan_row.get("posting_date"),
-					"maximum_limit_amount": flt(loan_row.get("loan_amount")),
-					"disbursed_amount": 0,
-				}
-			)
-
-		self.add_dynamic_fields(loan, loan_row, "Loan")
-		return loan
-
-	def prepare_loan_disbursement(self, loan_row, loan_doc, is_loc=False):
-		disbursement = {
-			"doctype": "Loan Disbursement",
-			"loan_disbursement_id": loan_row.get("loan_disbursement_id"),
-			"company": loan_doc.get("company"),
-			"against_loan": loan_doc.get("loan_id"),
-			"disbursement_date": loan_row.get("disbursement_date"),
-			"disbursed_amount": flt(loan_row.get("disbursed_amount")),
-			"posting_date": loan_row.get("posting_date"),
-			"is_imported": 1,
-		}
-
-		if is_loc:
-			disbursement.update(
-				{
-					"repayment_method": loan_row.get("repayment_method"),
-					"repayment_frequency": loan_row.get("repayment_frequency"),
-					"repayment_periods": loan_row.get("repayment_periods"),
-					"repayment_start_date": loan_row.get("repayment_start_date"),
-				}
-			)
-
-		return disbursement
-
 	def add_dynamic_fields(self, doc, row_data, doctype=None):
 		loan_meta = frappe.get_meta(doctype)
 		existing_fields = set(doc.keys())
@@ -578,19 +712,27 @@ class LoanImportTool(Document):
 	@frappe.whitelist()
 	def import_data(self):
 		self.validate()
+		return self.process_import()
 
-		if self.import_for == "Loan Repayment":
-			return self.import_loan_repayments()
-		else:
-			return self.import_loans()
+	def process_import(self):
+		import_data = self.process_import_file(self.import_for)
+		validation_results = self.validate_import_data(import_data)
 
-	def import_loans(self):
-		loan_data = self.process_import_file(self.import_for)
-		self.validate_loan_data(loan_data)
-		all_documents = self.prepare_loan_documents(loan_data)
+		if validation_results:
+			error_count = len(validation_results)
+			frappe.msgprint(
+				_("{0} errors. Check Loan Import Log for details. No data was imported.").format(error_count),
+				indicator="orange",
+			)
+			return {"validation_errors": error_count, "imported_count": 0}
+
+		all_documents = self.prepare_import_documents(import_data)
 
 		if len(all_documents) < 50:
-			return start_loan_import(all_documents, self.import_type)
+			if self.import_for == "Loan Repayment":
+				return start_loan_repayment_import(all_documents, self.name, self.import_for)
+			else:
+				return start_loan_import(all_documents, self.import_type, self.name, self.import_for)
 		else:
 			run_now = frappe.in_test or frappe.conf.developer_mode
 			if is_scheduler_inactive() and not run_now:
@@ -598,43 +740,34 @@ class LoanImportTool(Document):
 
 			job_id = f"loan_import::{self.name}"
 			if not is_job_enqueued(job_id):
-				enqueue(
-					start_loan_import,
-					queue="default",
-					timeout=10000,
-					event="loan_import",
-					job_id=job_id,
-					documents=all_documents,
-					import_type=self.import_type,
-					now=run_now,
-				)
-
-	def import_loan_repayments(self):
-		"""Import Loan Repayments using bulk insert for better performance"""
-		repayment_data = self.process_import_file(self.import_for)
-		self.validate_loan_repayment_data(repayment_data)
-
-		if len(repayment_data) < 50:
-			return start_loan_repayment_import(repayment_data)
-		else:
-			run_now = frappe.in_test or frappe.conf.developer_mode
-			if is_scheduler_inactive() and not run_now:
-				frappe.throw(_("Scheduler is inactive. Cannot import data."), title=_("Scheduler Inactive"))
-
-			job_id = f"loan_repayment_import::{self.name}"
-			if not is_job_enqueued(job_id):
-				enqueue(
-					start_loan_repayment_import,
-					queue="default",
-					timeout=10000,
-					event="loan_repayment_import",
-					job_id=job_id,
-					repayment_data=repayment_data,
-					now=run_now,
-				)
+				if self.import_for == "Loan Repayment":
+					enqueue(
+						start_loan_repayment_import,
+						queue="default",
+						timeout=10000,
+						event="loan_import",
+						job_id=job_id,
+						documents=all_documents,
+						import_tool_name=self.name,
+						import_for=self.import_for,
+						now=run_now,
+					)
+				else:
+					enqueue(
+						start_loan_import,
+						queue="default",
+						timeout=10000,
+						event="loan_import",
+						job_id=job_id,
+						documents=all_documents,
+						import_type=self.import_type,
+						import_tool_name=self.name,
+						import_for=self.import_for,
+						now=run_now,
+					)
 
 	def validate_loan_repayment_data(self, repayment_data):
-		"""Validate Loan Repayment data"""
+		errors = []
 		required_fields = [
 			"loan_repayment_id",
 			"against_loan",
@@ -645,26 +778,35 @@ class LoanImportTool(Document):
 		]
 
 		for i, repayment in enumerate(repayment_data):
+			row_errors = []
+
 			missing_fields = [field for field in required_fields if not repayment.get(field)]
 			if missing_fields:
-				frappe.throw(
-					_("Row {0}: Following fields are required: {1}").format(i + 1, ", ".join(missing_fields))
-				)
+				row_errors.append(_("Following fields are required: {0}").format(", ".join(missing_fields)))
 
-			# Check if loan exists
 			loan_id = repayment.get("against_loan")
 			if loan_id and not frappe.db.exists("Loan", loan_id):
-				frappe.throw(_("Row {0}: Loan '{1}' does not exist").format(i + 1, loan_id))
+				row_errors.append(_("Loan '{0}' does not exist").format(loan_id))
 
-			# Check if repayment ID already exists
 			repayment_id = repayment.get("loan_repayment_id")
 			if repayment_id and frappe.db.exists("Loan Repayment", repayment_id):
-				frappe.throw(_("Row {0}: Loan Repayment ID '{1}' already exists").format(i + 1, repayment_id))
+				row_errors.append(_("Loan Repayment ID '{0}' already exists").format(repayment_id))
 
-			self.validate_repayment_numeric_fields(repayment, i)
-			self.validate_repayment_date_fields(repayment, i)
+			numeric_errors = self.validate_repayment_numeric_fields(repayment, i)
+			if numeric_errors:
+				row_errors.extend(numeric_errors)
+
+			date_errors = self.validate_repayment_date_fields(repayment, i)
+			if date_errors:
+				row_errors.extend(date_errors)
+
+			for error in row_errors:
+				errors.append({"row": i + 1, "error": error})
+
+		return errors
 
 	def validate_repayment_numeric_fields(self, repayment, index):
+		errors = []
 		numeric_fields = [
 			"amount_paid",
 			"principal_amount_paid",
@@ -681,80 +823,389 @@ class LoanImportTool(Document):
 				try:
 					flt(repayment[field])
 				except ValueError:
-					frappe.throw(_("Row {0}: Invalid numeric value for field {1}").format(index + 1, field))
+					errors.append(_("Invalid numeric value for field {0}").format(field))
+
+		return errors
 
 	def validate_repayment_date_fields(self, repayment, index):
+		errors = []
 		date_fields = ["posting_date", "value_date", "reference_date"]
 		for field in date_fields:
 			if repayment.get(field):
 				try:
 					getdate(repayment[field])
 				except Exception:
-					frappe.throw(_("Row {0}: Invalid date format for field {1}").format(index + 1, field))
+					errors.append(_("Invalid date format for field {0}").format(field))
 
-	def prepare_loan_repayment_documents(self, repayment_data):
-		"""Prepare Loan Repayment documents for bulk insert"""
-		documents = []
+		return errors
 
-		for repayment_row in repayment_data:
-			repayment_doc = self.prepare_loan_repayment_doc(repayment_row)
-			documents.append(repayment_doc)
 
-		return documents
+def create_loan_import_log(
+	reference_doctype, reference_name, title, status, error=None, against_loan=None
+):
+	try:
+		log = frappe.new_doc("Loan Import Log")
+		log.reference_doctype = reference_doctype
+		log.reference_name = reference_name
+		log.title = title
+		log.status = status
+		if against_loan:
+			log.against_loan = against_loan
+		if error:
+			log.error = str(error)
+		log.insert(ignore_permissions=True)
+		frappe.db.commit()
+	except Exception as e:
+		frappe.log_error(f"Failed to create Loan Import Log: {str(e)}")
 
-	def prepare_loan_repayment_doc(self, repayment_row):
-		loan_details = frappe.db.get_value(
-			"Loan",
-			repayment_row.get("against_loan"),
-			["applicant_type", "applicant", "loan_product", "company"],
-			as_dict=True,
+
+def start_loan_import(documents, import_type, import_tool_name, import_for):
+	errors = 0
+	success_count = 0
+	failed_loans = []
+
+	loan_documents = []
+	disbursement_documents = []
+	interest_accrual_documents = []
+	loan_demand_documents = []
+	gl_entry_documents = []
+
+	for doc in documents:
+		if doc.get("doctype") == "Loan":
+			loan_documents.append(doc)
+		elif doc.get("doctype") == "Loan Disbursement":
+			disbursement_documents.append(doc)
+		elif doc.get("doctype") == "Loan Interest Accrual":
+			interest_accrual_documents.append(doc)
+		elif doc.get("doctype") == "Loan Demand":
+			loan_demand_documents.append(doc)
+		elif doc.get("_is_gl_entry"):
+			gl_entry_documents.append(doc)
+
+	created_loans = create_loan_documents(loan_documents, import_tool_name, import_for)
+	success_count += len(created_loans)
+
+	if import_type == "Mid Tenure Loans":
+		created_disbursements = create_disbursement_documents(
+			disbursement_documents, created_loans, import_tool_name, import_for, failed_loans
 		)
 
-		repayment = {
-			"doctype": "Loan Repayment",
-			"loan_repayment_id": repayment_row.get("loan_repayment_id"),
-			"against_loan": repayment_row.get("against_loan"),
-			"applicant_type": loan_details.applicant_type,
-			"applicant": loan_details.applicant,
-			"loan_product": loan_details.loan_product,
-			"loan_disbursement": repayment_row.get("loan_disbursement"),
-			"repayment_type": repayment_row.get("repayment_type"),
-			"posting_date": repayment_row.get("posting_date"),
-			"value_date": repayment_row.get("value_date") or repayment_row.get("posting_date"),
-			"amount_paid": flt(repayment_row.get("amount_paid", 0)),
-			"principal_amount_paid": flt(repayment_row.get("principal_amount_paid", 0)),
-			"total_interest_paid": flt(repayment_row.get("total_interest_paid", 0)),
-			"total_penalty_paid": flt(repayment_row.get("total_penalty_paid", 0)),
-			"total_charges_paid": flt(repayment_row.get("total_charges_paid", 0)),
-			"unbooked_interest_paid": flt(repayment_row.get("unbooked_interest_paid", 0)),
-			"unbooked_penalty_paid": flt(repayment_row.get("unbooked_penalty_paid", 0)),
-			"excess_amount": flt(repayment_row.get("excess_amount", 0)),
-			"payment_account": repayment_row.get("payment_account"),
-			"loan_account": repayment_row.get("loan_account"),
-			"bank_account": repayment_row.get("bank_account"),
-			"reference_number": repayment_row.get("reference_number"),
-			"reference_date": repayment_row.get("reference_date"),
-			"manual_remarks": repayment_row.get("manual_remarks"),
-			"company": self.company,
-			"is_imported": 1,
-		}
+		if gl_entry_documents:
+			create_gl_entries(gl_entry_documents, created_loans, import_tool_name, import_for, failed_loans)
 
-		self.add_dynamic_fields(repayment, repayment_row, "Loan Repayment")
-		return repayment
+		if interest_accrual_documents:
+			create_interest_accrual_documents(
+				interest_accrual_documents,
+				created_loans,
+				created_disbursements,
+				import_tool_name,
+				import_for,
+				failed_loans,
+			)
+
+		if loan_demand_documents:
+			create_loan_demand_documents(
+				loan_demand_documents,
+				created_loans,
+				created_disbursements,
+				import_tool_name,
+				import_for,
+				failed_loans,
+			)
+
+	frappe.db.commit()
+
+	if failed_loans:
+		publish_final_status(len(documents), len(documents), "partial_success")
+		frappe.msgprint(
+			_("Completed with {0} errors. Failed loans: {1}").format(
+				len(failed_loans), ", ".join(failed_loans)
+			),
+			indicator="orange",
+		)
+	else:
+		publish_final_status(len(documents), len(documents), "success")
+		frappe.msgprint(
+			_("Loan import completed successfully! Imported {0} loans").format(success_count),
+			indicator="green",
+		)
+
+	return {"success_count": success_count, "failed_loans": failed_loans}
 
 
-# Add bulk insert function for Loan Repayments
-def start_loan_repayment_import(repayment_data):
-	"""Bulk insert Loan Repayments for better performance"""
+def create_loan_documents(loan_documents, import_tool_name, import_for):
+	created_loans = {}
+	for idx, loan_dict in enumerate(loan_documents):
+		publish(idx, len(loan_documents), "Loan")
+		loan_id = loan_dict.get("loan_id")
+
+		if loan_id in created_loans:
+			continue
+
+		try:
+			loan = frappe.get_doc(loan_dict)
+			loan.flags.ignore_mandatory = True
+			loan.flags.ignore_validate = True
+			loan.insert(ignore_permissions=True)
+			loan.submit()
+
+			created_loans[loan_id] = loan.name
+			create_loan_import_log("Loan", loan.name, f"Loan {loan_id}", "Success", against_loan=loan_id)
+		except Exception as e:
+			frappe.db.rollback()
+			error_message = f"Error importing loan {loan_id}: {str(e)}\n{traceback.format_exc()}"
+			create_loan_import_log(
+				"Loan", loan_id, f"Loan {loan_id}", "Failed", error=error_message, against_loan=loan_id
+			)
+			frappe.log_error(f"Loan Import Error for {loan_id}: {str(e)}")
+
+	return created_loans
+
+
+def create_disbursement_documents(
+	disbursement_documents, created_loans, import_tool_name, import_for, failed_loans
+):
+	created_disbursements = {}
+	for idx, disbursement_dict in enumerate(disbursement_documents):
+		loan_id = disbursement_dict.get("against_loan")
+		disbursement_id = disbursement_dict.get("loan_disbursement_id")
+
+		if not loan_id or loan_id not in created_loans:
+			failed_loans.append(loan_id)
+			create_loan_import_log(
+				"Loan Disbursement",
+				disbursement_id,
+				f"Disbursement {disbursement_id}",
+				"Failed",
+				error=f"No matching loan found: {loan_id}",
+				against_loan=loan_id,
+			)
+			continue
+
+		if disbursement_id in created_disbursements:
+			continue
+
+		try:
+			disbursement_dict["against_loan"] = created_loans[loan_id]
+			disbursement = frappe.get_doc(disbursement_dict)
+			disbursement.flags.ignore_mandatory = True
+			disbursement.flags.ignore_validate = True
+			disbursement.insert(ignore_permissions=True)
+			disbursement.make_gl_entries = MethodType(lambda self, *a, **kw: None, disbursement)
+			disbursement.status = "Submitted"
+			disbursement.submit()
+
+			created_disbursements[disbursement_id] = disbursement.name
+			create_loan_import_log(
+				"Loan Disbursement",
+				disbursement.name,
+				f"Disbursement {disbursement_id}",
+				"Success",
+				against_loan=loan_id,
+			)
+
+			loan_row = disbursement_dict.get("_loan_row", {})
+			migration_date = loan_row.get("migration_date")
+
+			update_demand_generated_for_repayment_schedule(
+				created_loans[loan_id],
+				disbursement.name,
+				migration_date,
+			)
+		except Exception as e:
+			frappe.db.rollback()
+			failed_loans.append(loan_id)
+			error_message = (
+				f"Error importing disbursement {disbursement_id}: {str(e)}\n{traceback.format_exc()}"
+			)
+			create_loan_import_log(
+				"Loan Disbursement",
+				disbursement_id,
+				f"Disbursement {disbursement_id}",
+				"Failed",
+				error=error_message,
+				against_loan=loan_id,
+			)
+			frappe.log_error(f"Disbursement Import Error for {disbursement_id}: {str(e)}")
+
+	return created_disbursements
+
+
+def create_gl_entries(
+	gl_entry_documents, created_loans, import_tool_name, import_for, failed_loans
+):
+	for idx, gl_placeholder in enumerate(gl_entry_documents):
+		loan_row = gl_placeholder.get("_loan_row")
+		loan_doc = gl_placeholder.get("_loan_doc")
+
+		loan_id = loan_doc.get("loan_id")
+
+		if not loan_id or loan_id not in created_loans or loan_id in failed_loans:
+			continue
+
+		try:
+			loan_name = created_loans[loan_id]
+
+			loan_import_tool = frappe.new_doc("Loan Import Tool")
+			gl_entries = loan_import_tool.prepare_opening_gl_entry(loan_row, loan_name)
+
+			if gl_entries:
+				for gl_entry_dict in gl_entries:
+					gl_entry = frappe.get_doc(gl_entry_dict)
+					gl_entry.flags.ignore_mandatory = True
+					gl_entry.flags.ignore_validate = True
+					gl_entry.insert(ignore_permissions=True)
+					gl_entry.submit()
+					create_loan_import_log(
+						"GL Entry", gl_entry.name, f"GL Entry for {loan_id}", "Success", against_loan=loan_id
+					)
+		except Exception as e:
+			frappe.db.rollback()
+			failed_loans.append(loan_id)
+			error_message = (
+				f"Error creating GL entry for loan {loan_id}: {str(e)}\n{traceback.format_exc()}"
+			)
+			create_loan_import_log(
+				"GL Entry",
+				loan_id,
+				f"GL Entry for {loan_id}",
+				"Failed",
+				error=error_message,
+				against_loan=loan_id,
+			)
+			frappe.log_error(f"GL Entry Import Error for {loan_id}: {str(e)}")
+
+
+def create_interest_accrual_documents(
+	interest_accrual_documents,
+	created_loans,
+	created_disbursements,
+	import_tool_name,
+	import_for,
+	failed_loans,
+):
+	for idx, accrual_dict in enumerate(interest_accrual_documents):
+		loan_id = accrual_dict.get("loan")
+		disbursement_id = accrual_dict.get("loan_disbursement")
+
+		if not loan_id or loan_id not in created_loans or loan_id in failed_loans:
+			continue
+
+		if not disbursement_id or disbursement_id not in created_disbursements:
+			failed_loans.append(loan_id)
+			create_loan_import_log(
+				"Loan Interest Accrual",
+				loan_id,
+				f"Interest Accrual for {loan_id}",
+				"Failed",
+				error=f"No matching disbursement found: {disbursement_id}",
+				against_loan=loan_id,
+			)
+			continue
+
+		try:
+			accrual_dict["loan"] = created_loans[loan_id]
+			accrual_dict["loan_disbursement"] = created_disbursements[disbursement_id]
+
+			accrual = frappe.get_doc(accrual_dict)
+			accrual.flags.ignore_mandatory = True
+			accrual.flags.ignore_validate = True
+			accrual.flags.ignore_gl_entries = True
+			accrual.insert(ignore_permissions=True)
+			accrual.make_gl_entries = MethodType(lambda self, *a, **kw: None, accrual)
+			accrual.submit()
+			create_loan_import_log(
+				"Loan Interest Accrual",
+				accrual.name,
+				f"Interest Accrual for {loan_id}",
+				"Success",
+				against_loan=loan_id,
+			)
+		except Exception as e:
+			frappe.db.rollback()
+			failed_loans.append(loan_id)
+			error_message = (
+				f"Error creating interest accrual for loan {loan_id}: {str(e)}\n{traceback.format_exc()}"
+			)
+			create_loan_import_log(
+				"Loan Interest Accrual",
+				loan_id,
+				f"Interest Accrual for {loan_id}",
+				"Failed",
+				error=error_message,
+				against_loan=loan_id,
+			)
+			frappe.log_error(f"Interest Accrual Import Error for {loan_id}: {str(e)}")
+
+
+def create_loan_demand_documents(
+	loan_demand_documents,
+	created_loans,
+	created_disbursements,
+	import_tool_name,
+	import_for,
+	failed_loans,
+):
+	for idx, demand_dict in enumerate(loan_demand_documents):
+		loan_id = demand_dict.get("loan")
+		disbursement_id = demand_dict.get("loan_disbursement")
+
+		if not loan_id or loan_id not in created_loans or loan_id in failed_loans:
+			continue
+
+		if not disbursement_id or disbursement_id not in created_disbursements:
+			failed_loans.append(loan_id)
+			create_loan_import_log(
+				"Loan Demand",
+				loan_id,
+				f"Loan Demand for {loan_id}",
+				"Failed",
+				error=f"No matching disbursement found: {disbursement_id}",
+				against_loan=loan_id,
+			)
+			continue
+
+		try:
+			demand_dict["loan"] = created_loans[loan_id]
+			demand_dict["loan_disbursement"] = created_disbursements[disbursement_id]
+
+			demand = frappe.get_doc(demand_dict)
+			demand.flags.ignore_mandatory = True
+			demand.flags.ignore_validate = True
+			demand.insert(ignore_permissions=True)
+			demand.make_gl_entries = MethodType(lambda self, *a, **kw: None, demand)
+			demand.submit()
+			create_loan_import_log(
+				"Loan Demand", demand.name, f"Loan Demand for {loan_id}", "Success", against_loan=loan_id
+			)
+		except Exception as e:
+			frappe.db.rollback()
+			failed_loans.append(loan_id)
+			error_message = (
+				f"Error creating loan demand for loan {loan_id}: {str(e)}\n{traceback.format_exc()}"
+			)
+			create_loan_import_log(
+				"Loan Demand",
+				loan_id,
+				f"Loan Demand for {loan_id}",
+				"Failed",
+				error=error_message,
+				against_loan=loan_id,
+			)
+			frappe.log_error(f"Loan Demand Import Error for {loan_id}: {str(e)}")
+
+
+def start_loan_repayment_import(documents, import_tool_name, import_for):
 	errors = 0
 	created_repayments = []
 
 	try:
-		# Prepare documents
 		loan_import_tool = frappe.new_doc("Loan Import Tool")
-		repayment_documents = loan_import_tool.prepare_loan_repayment_documents(repayment_data)
 
-		# Define fields for bulk insert
+		values = []
+		now = frappe.utils.now()
+		user = frappe.session.user
+
 		repayment_meta = frappe.get_meta("Loan Repayment")
 		standard_fields = [
 			"name",
@@ -789,266 +1240,105 @@ def start_loan_repayment_import(repayment_data):
 			"modified_by",
 		]
 
-		# Get custom fields
 		custom_fields = [
 			field.fieldname for field in repayment_meta.fields if field.fieldname.startswith("custom_")
 		]
 
 		all_fields = standard_fields + custom_fields
 
-		values = []
-		now = frappe.utils.now()
-		user = frappe.session.user
+		for idx, repayment_dict in enumerate(documents):
+			publish(idx, len(documents), "Loan Repayment")
 
-		for idx, repayment_dict in enumerate(repayment_documents):
-			publish(idx, len(repayment_documents), "Loan Repayment")
+			try:
+				name = repayment_dict.get("loan_repayment_id")
 
-			# Generate name if not provided
-			name = repayment_dict.get("loan_repayment_id")
+				value_tuple = (
+					name,
+					repayment_dict.get("loan_repayment_id"),
+					repayment_dict.get("against_loan"),
+					repayment_dict.get("applicant_type"),
+					repayment_dict.get("applicant"),
+					repayment_dict.get("loan_product"),
+					repayment_dict.get("loan_disbursement"),
+					repayment_dict.get("repayment_type", "Regular"),
+					repayment_dict.get("posting_date"),
+					repayment_dict.get("value_date"),
+					flt(repayment_dict.get("amount_paid", 0)),
+					flt(repayment_dict.get("principal_amount_paid", 0)),
+					flt(repayment_dict.get("total_interest_paid", 0)),
+					flt(repayment_dict.get("total_penalty_paid", 0)),
+					flt(repayment_dict.get("total_charges_paid", 0)),
+					flt(repayment_dict.get("unbooked_interest_paid", 0)),
+					flt(repayment_dict.get("unbooked_penalty_paid", 0)),
+					flt(repayment_dict.get("excess_amount", 0)),
+					repayment_dict.get("payment_account"),
+					repayment_dict.get("loan_account"),
+					repayment_dict.get("bank_account"),
+					repayment_dict.get("reference_number"),
+					repayment_dict.get("reference_date"),
+					repayment_dict.get("manual_remarks"),
+					repayment_dict.get("company"),
+					1,
+					now,
+					now,
+					user,
+					user,
+				)
 
-			# Build the value tuple dynamically including custom fields
-			value_tuple = (
-				name,
-				repayment_dict.get("loan_repayment_id"),
-				repayment_dict.get("against_loan"),
-				repayment_dict.get("applicant_type"),
-				repayment_dict.get("applicant"),
-				repayment_dict.get("loan_product"),
-				repayment_dict.get("loan_disbursement"),
-				repayment_dict.get("repayment_type", "Regular"),
-				repayment_dict.get("posting_date"),
-				repayment_dict.get("value_date"),
-				flt(repayment_dict.get("amount_paid", 0)),
-				flt(repayment_dict.get("principal_amount_paid", 0)),
-				flt(repayment_dict.get("total_interest_paid", 0)),
-				flt(repayment_dict.get("total_penalty_paid", 0)),
-				flt(repayment_dict.get("total_charges_paid", 0)),
-				flt(repayment_dict.get("unbooked_interest_paid", 0)),
-				flt(repayment_dict.get("unbooked_penalty_paid", 0)),
-				flt(repayment_dict.get("excess_amount", 0)),
-				repayment_dict.get("payment_account"),
-				repayment_dict.get("loan_account"),
-				repayment_dict.get("bank_account"),
-				repayment_dict.get("reference_number"),
-				repayment_dict.get("reference_date"),
-				repayment_dict.get("manual_remarks"),
-				repayment_dict.get("company"),
-				1,  # is_imported
-				now,  # creation
-				now,  # modified
-				user,  # owner
-				user,  # modified_by
-			)
+				for custom_field in custom_fields:
+					value_tuple += (repayment_dict.get(custom_field),)
 
-			# Add custom field values to the tuple
-			for custom_field in custom_fields:
-				value_tuple += (repayment_dict.get(custom_field),)
+				values.append(value_tuple)
+				created_repayments.append(name)
+				create_loan_import_log(
+					"Loan Repayment",
+					name,
+					f"Repayment {name}",
+					"Success",
+					against_loan=repayment_dict.get("against_loan"),
+				)
 
-			values.append(value_tuple)
-			created_repayments.append(name)
+			except Exception as e:
+				errors += 1
+				error_message = f"Error importing repayment {repayment_dict.get('loan_repayment_id')}: {str(e)}\n{traceback.format_exc()}"
+				create_loan_import_log(
+					"Loan Repayment",
+					repayment_dict.get("loan_repayment_id"),
+					f"Repayment {repayment_dict.get('loan_repayment_id')}",
+					"Failed",
+					error=error_message,
+					against_loan=repayment_dict.get("against_loan"),
+				)
+				frappe.log_error(f"Loan Repayment Import Error: {str(e)}")
 
-		# Bulk insert
 		if values:
 			frappe.db.bulk_insert("Loan Repayment", fields=all_fields, values=values)
-			frappe.db.commit()
 
-			# Update status for created repayments
 			for repayment_name in created_repayments:
 				frappe.db.set_value("Loan Repayment", repayment_name, "docstatus", 1)
 
 			frappe.db.commit()
 
-		publish_final_status(len(repayment_documents), len(repayment_documents), "success")
-		frappe.msgprint(_("Loan Repayment import completed successfully!"), indicator="green")
+		if errors > 0:
+			publish_final_status(len(documents), len(documents), "partial_success")
+			frappe.msgprint(
+				_("Loan Repayment import completed with {0} errors.").format(errors), indicator="orange"
+			)
+		else:
+			publish_final_status(len(documents), len(documents), "success")
+			frappe.msgprint(_("Loan Repayment import completed successfully!"), indicator="green")
 
 	except Exception as e:
-		errors += 1
 		frappe.db.rollback()
-		frappe.log_error(f"Loan Repayment Import Error: {str(e)}")
-		publish_final_status(len(repayment_documents), len(repayment_documents), "partial_success")
+		error_message = f"Loan Repayment Import Error: {str(e)}\n{traceback.format_exc()}"
+		frappe.log_error(error_message)
+		publish_final_status(len(documents), len(documents), "partial_success")
 		frappe.msgprint(
-			_("Loan Repayment import completed with errors. Check Error Log for details."),
+			_("Loan Repayment import completed with errors. Check Loan Import Log for details."),
 			indicator="orange",
 		)
 
 	return created_repayments
-
-
-def start_loan_import(documents, import_type):
-	errors = 0
-	created_documents = []
-
-	loan_documents = []
-	disbursement_documents = []
-	interest_accrual_documents = []
-	loan_demand_documents = []
-	gl_entry_documents = []
-
-	for doc in documents:
-		if doc.get("doctype") == "Loan":
-			loan_documents.append(doc)
-		elif doc.get("doctype") == "Loan Disbursement":
-			disbursement_documents.append(doc)
-		elif doc.get("doctype") == "Loan Interest Accrual":
-			interest_accrual_documents.append(doc)
-		elif doc.get("doctype") == "Loan Demand":
-			loan_demand_documents.append(doc)
-		elif doc.get("_is_gl_entry"):
-			gl_entry_documents.append(doc)
-
-	created_loans = {}
-	created_disbursements = {}
-
-	created_loans = create_loan_documents(loan_documents)
-	created_disbursements = create_disbursement_documents(disbursement_documents, created_loans)
-
-	if gl_entry_documents:
-		create_gl_entries(gl_entry_documents, created_loans)
-
-	if interest_accrual_documents:
-		create_interest_accrual_documents(
-			interest_accrual_documents, created_loans, created_disbursements
-		)
-
-	if loan_demand_documents:
-		create_loan_demand_documents(loan_demand_documents, created_loans, created_disbursements)
-
-	frappe.db.commit()
-
-	if errors > 0:
-		publish_final_status(len(documents), len(documents), "partial_success")
-		frappe.msgprint(_("Completed with {0} errors.").format(errors), indicator="orange")
-	else:
-		publish_final_status(len(documents), len(documents), "success")
-		frappe.msgprint(_("Loan import completed successfully!"), indicator="green")
-
-	return created_documents
-
-
-def create_loan_documents(loan_documents):
-	created_loans = {}
-	for idx, loan_dict in enumerate(loan_documents):
-		publish(idx, len(loan_documents), "Loan")
-		loan_id = loan_dict.get("loan_id")
-
-		if loan_id in created_loans:
-			continue
-
-		loan = frappe.get_doc(loan_dict)
-		loan.flags.ignore_mandatory = True
-		loan.flags.ignore_validate = True
-		loan.insert(ignore_permissions=True)
-		loan.submit()
-
-		created_loans[loan_id] = loan.name
-
-	return created_loans
-
-
-def create_disbursement_documents(disbursement_documents, created_loans):
-	created_disbursements = {}
-	for idx, disbursement_dict in enumerate(disbursement_documents):
-		loan_id = disbursement_dict.get("against_loan")
-		disbursement_id = disbursement_dict.get("loan_disbursement_id")
-
-		if not loan_id or loan_id not in created_loans:
-			frappe.throw(_("No matching loan found for disbursement {0}").format(disbursement_id))
-
-		if disbursement_id in created_disbursements:
-			continue
-
-		disbursement_dict["against_loan"] = created_loans[loan_id]
-		disbursement = frappe.get_doc(disbursement_dict)
-		disbursement.flags.ignore_mandatory = True
-		disbursement.flags.ignore_validate = True
-		disbursement.insert(ignore_permissions=True)
-		disbursement.make_gl_entries = MethodType(lambda self, *a, **kw: None, disbursement)
-		disbursement.status = "Submitted"
-		disbursement.submit()
-
-		created_disbursements[disbursement_id] = disbursement.name
-
-		loan_row = disbursement_dict.get("_loan_row", {})
-		migration_date = loan_row.get("migration_date")
-
-		update_demand_generated_for_repayment_schedule(
-			created_loans[loan_id],
-			disbursement.name,
-			migration_date,
-		)
-
-	return created_disbursements
-
-
-def create_gl_entries(gl_entry_documents, created_loans):
-	for idx, gl_placeholder in enumerate(gl_entry_documents):
-		loan_row = gl_placeholder.get("_loan_row")
-		loan_doc = gl_placeholder.get("_loan_doc")
-
-		loan_id = loan_doc.get("loan_id")
-
-		if not loan_id or loan_id not in created_loans:
-			frappe.throw(_("No matching loan found for GL entry for loan ID: {0}").format(loan_id))
-
-		loan_name = created_loans[loan_id]
-
-		loan_import_tool = frappe.new_doc("Loan Import Tool")
-		gl_entries = loan_import_tool.prepare_opening_gl_entry(loan_row, loan_name)
-
-		if gl_entries:
-			for gl_entry_dict in gl_entries:
-				gl_entry = frappe.get_doc(gl_entry_dict)
-				gl_entry.flags.ignore_mandatory = True
-				gl_entry.flags.ignore_validate = True
-				gl_entry.insert(ignore_permissions=True)
-				gl_entry.submit()
-
-
-def create_interest_accrual_documents(
-	interest_accrual_documents, created_loans, created_disbursements
-):
-	for idx, accrual_dict in enumerate(interest_accrual_documents):
-		loan_id = accrual_dict.get("loan")
-		disbursement_id = accrual_dict.get("loan_disbursement")
-
-		if not loan_id or loan_id not in created_loans:
-			frappe.throw(_("No matching loan found for interest accrual"))
-
-		if not disbursement_id or disbursement_id not in created_disbursements:
-			frappe.throw(_("No matching disbursement found for interest accrual"))
-
-		accrual_dict["loan"] = created_loans[loan_id]
-		accrual_dict["loan_disbursement"] = created_disbursements[disbursement_id]
-
-		accrual = frappe.get_doc(accrual_dict)
-		accrual.flags.ignore_mandatory = True
-		accrual.flags.ignore_validate = True
-		accrual.flags.ignore_gl_entries = True
-		accrual.insert(ignore_permissions=True)
-		accrual.make_gl_entries = MethodType(lambda self, *a, **kw: None, accrual)
-		accrual.submit()
-
-
-def create_loan_demand_documents(loan_demand_documents, created_loans, created_disbursements):
-	for idx, demand_dict in enumerate(loan_demand_documents):
-		loan_id = demand_dict.get("loan")
-		disbursement_id = demand_dict.get("loan_disbursement")
-
-		if not loan_id or loan_id not in created_loans:
-			frappe.throw(_("No matching loan found for loan demand"))
-
-		if not disbursement_id or disbursement_id not in created_disbursements:
-			frappe.throw(_("No matching disbursement found for loan demand"))
-
-		demand_dict["loan"] = created_loans[loan_id]
-		demand_dict["loan_disbursement"] = created_disbursements[disbursement_id]
-
-		demand = frappe.get_doc(demand_dict)
-		demand.flags.ignore_mandatory = True
-		demand.flags.ignore_validate = True
-		demand.insert(ignore_permissions=True)
-		demand.make_gl_entries = MethodType(lambda self, *a, **kw: None, demand)
-		demand.submit()
 
 
 def update_demand_generated_for_repayment_schedule(loan_name, disbursement_name, migration_date):
