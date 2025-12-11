@@ -1,20 +1,22 @@
-# Translations template for Lending.
-# Copyright (C) 2025 Frappe Technologies Pvt. Ltd.
-# This file is distributed under the same license as the Lending project.
-# FIRST AUTHOR <EMAIL@ADDRESS>, 2025.
-#
 msgid ""
 msgstr ""
-"Project-Id-Version: Lending VERSION\n"
+"Project-Id-Version: frappe\n"
 "Report-Msgid-Bugs-To: contact@frappe.io\n"
 "POT-Creation-Date: 2025-12-07 09:35+0000\n"
-"PO-Revision-Date: 2025-12-07 09:35+0000\n"
+"PO-Revision-Date: 2025-12-09 09:13\n"
 "Last-Translator: contact@frappe.io\n"
-"Language-Team: contact@frappe.io\n"
+"Language-Team: Portuguese\n"
 "MIME-Version: 1.0\n"
-"Content-Type: text/plain; charset=utf-8\n"
+"Content-Type: text/plain; charset=UTF-8\n"
 "Content-Transfer-Encoding: 8bit\n"
 "Generated-By: Babel 2.16.0\n"
+"Plural-Forms: nplurals=2; plural=(n != 1);\n"
+"X-Crowdin-Project: frappe\n"
+"X-Crowdin-Project-ID: 639578\n"
+"X-Crowdin-Language: pt-PT\n"
+"X-Crowdin-File: /[frappe.lending] develop/lending/locale/main.pot\n"
+"X-Crowdin-File-ID: 130\n"
+"Language: pt_PT\n"
 
 #: lending/loan_management/report/applicant_wise_loan_security_exposure/applicant_wise_loan_security_exposure.py:83
 msgid "% Of Applicant Portfolio"
@@ -472,7 +474,7 @@ msgstr ""
 #: lending/loan_management/doctype/pledge/pledge.json
 #: lending/loan_management/doctype/proposed_pledge/proposed_pledge.json
 msgid "Amount"
-msgstr ""
+msgstr "Montante"
 
 #. Label of the amount_paid (Currency) field in DocType 'Loan Repayment'
 #: lending/loan_management/doctype/loan_repayment/loan_repayment.json
@@ -1746,7 +1748,7 @@ msgstr ""
 #. Label of the due_date (Date) field in DocType 'Loan Repayment'
 #: lending/loan_management/doctype/loan_repayment/loan_repayment.json
 msgid "Due Date"
-msgstr ""
+msgstr "Data de Vencimento"
 
 #. Option for the 'Moratorium Type' (Select) field in DocType 'Loan'
 #. Option for the 'Demand Type' (Select) field in DocType 'Loan Demand'
@@ -2054,7 +2056,7 @@ msgstr ""
 #: lending/loan_management/doctype/loan_repayment_schedule/loan_repayment_schedule.json
 #: lending/loan_management/doctype/loan_restructure/loan_restructure.json
 msgid "Initiated"
-msgstr ""
+msgstr "Iniciado"
 
 #: lending/loan_management/report/loan_outstanding_report/loan_outstanding_report.py:118
 msgid "Installments Overdue"
@@ -3654,7 +3656,7 @@ msgstr ""
 #. Option for the 'Demand Type' (Select) field in DocType 'Loan Demand'
 #: lending/loan_management/doctype/loan_demand/loan_demand.json
 msgid "Normal"
-msgstr ""
+msgstr "Normal"
 
 #. Option for the 'Interest Type' (Select) field in DocType 'Loan Interest
 #. Accrual'
@@ -4120,7 +4122,7 @@ msgstr ""
 #. Option for the 'Status' (Select) field in DocType 'Loan Security Shortfall'
 #: lending/loan_management/doctype/loan_security_shortfall/loan_security_shortfall.json
 msgid "Pending"
-msgstr ""
+msgstr "Pendente"
 
 #. Label of the pending_charge_amount (Currency) field in DocType 'Loan Charge
 #. Reference'
