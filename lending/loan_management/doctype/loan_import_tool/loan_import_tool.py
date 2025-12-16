@@ -149,6 +149,7 @@ class LoanImportTool(Document):
 		return loan_data
 
 	def validate_import_data(self, import_data):
+		"""Validate import data and return list of validation errors"""
 		validation_results = []
 
 		if self.import_for == "Loan":
@@ -156,29 +157,10 @@ class LoanImportTool(Document):
 		else:
 			validation_results = self.validate_loan_repayment_data(import_data)
 
-		if validation_results:
-			for error in validation_results:
-				row = error["row"]
-				error_msg = error["error"]
-
-				if self.import_for == "Loan":
-					loan_id = import_data[row - 1].get("loan_id") if row - 1 < len(import_data) else f"Row {row}"
-					create_loan_import_log(
-						None,
-						None,
-						f"Validation Error - Row {row}",
-						"Failed",
-						error=error_msg,
-						against_loan=loan_id if loan_id and loan_id != f"Row {row}" else None,
-					)
-				else:
-					create_loan_import_log(None, None, f"Validation Error - Row {row}", "Failed", error=error_msg)
-
-			return validation_results
-
-		return []
+		return validation_results
 
 	def validate_loan_data(self, loan_data):
+		"""Validate loan import data with option to skip duplicates"""
 		errors = []
 		required_fields = [
 			"loan_id",
@@ -218,6 +200,7 @@ class LoanImportTool(Document):
 
 		for i, loan in enumerate(loan_data):
 			row_errors = []
+			row_number = i + 1
 
 			missing_fields = [field for field in required_fields if not loan.get(field)]
 			if missing_fields:
@@ -256,7 +239,7 @@ class LoanImportTool(Document):
 				row_errors.extend(date_errors)
 
 			for error in row_errors:
-				errors.append({"row": i + 1, "error": error})
+				errors.append({"row": row_number, "error": error})
 
 		return errors
 
@@ -719,14 +702,58 @@ class LoanImportTool(Document):
 		validation_results = self.validate_import_data(import_data)
 
 		if validation_results:
-			error_count = len(validation_results)
+			for error in validation_results:
+				row = error["row"]
+				error_msg = error["error"]
+
+				if self.import_for == "Loan":
+					loan_id = import_data[row - 1].get("loan_id") if row - 1 < len(import_data) else f"Row {row}"
+					create_loan_import_log(
+						None,
+						None,
+						f"Validation Error - Row {row}",
+						"Failed",
+						error=error_msg,
+						against_loan=loan_id if loan_id and loan_id != f"Row {row}" else None,
+					)
+				else:
+					create_loan_import_log(None, None, f"Validation Error - Row {row}", "Failed", error=error_msg)
+
+			rows_with_errors = set()
+			for error in validation_results:
+				rows_with_errors.add(error["row"] - 1)
+
+			valid_rows = []
+			invalid_rows = []
+
+			for i, row in enumerate(import_data):
+				if i in rows_with_errors:
+					invalid_rows.append(row)
+				else:
+					valid_rows.append(row)
+
+			if not valid_rows:
+				error_count = len(validation_results)
+				frappe.msgprint(
+					_("{0} errors. Check Loan Import Log for details. No data was imported.").format(error_count),
+					indicator="orange",
+				)
+				return {"validation_errors": error_count, "imported_count": 0}
+
+			error_count = len(invalid_rows)
+			valid_count = len(valid_rows)
+
 			frappe.msgprint(
-				_("{0} errors. Check Loan Import Log for details. No data was imported.").format(error_count),
+				_(
+					"{0} rows have validation errors and will be skipped. {1} valid rows will be imported."
+				).format(error_count, valid_count),
 				indicator="orange",
 			)
-			return {"validation_errors": error_count, "imported_count": 0}
 
-		all_documents = self.prepare_import_documents(import_data)
+			all_documents = self.prepare_import_documents(valid_rows)
+		else:
+			all_documents = self.prepare_import_documents(import_data)
+			valid_count = len(import_data)
 
 		if len(all_documents) < 50:
 			if self.import_for == "Loan Repayment":
@@ -765,6 +792,8 @@ class LoanImportTool(Document):
 						import_for=self.import_for,
 						now=run_now,
 					)
+
+		return {"success_count": valid_count}
 
 	def validate_loan_repayment_data(self, repayment_data):
 		errors = []
