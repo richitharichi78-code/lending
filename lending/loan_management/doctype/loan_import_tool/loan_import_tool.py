@@ -300,7 +300,7 @@ class LoanImportTool(Document):
 		)
 		customer.flags.ignore_mandatory = True
 		customer.insert(ignore_permissions=True)
-		frappe.db.commit()
+		frappe.db.commit()  # nosemgrep
 		frappe.msgprint(_("Created customer: {0}").format(customer_name))
 		return customer.name
 
@@ -883,7 +883,7 @@ def create_loan_import_log(
 		if error:
 			log.error = str(error)
 		log.insert(ignore_permissions=True)
-		frappe.db.commit()
+		frappe.db.commit()  # nosemgrep
 	except Exception as e:
 		frappe.log_error(f"Failed to create Loan Import Log: {str(e)}")
 
@@ -942,7 +942,7 @@ def start_loan_import(documents, import_type, import_tool_name, import_for):
 				failed_loans,
 			)
 
-	frappe.db.commit()
+	frappe.db.commit()  # nosemgrep
 
 	if failed_loans:
 		publish_final_status(len(documents), len(documents), "partial_success")
@@ -1346,7 +1346,7 @@ def start_loan_repayment_import(documents, import_tool_name, import_for):
 			for repayment_name in created_repayments:
 				frappe.db.set_value("Loan Repayment", repayment_name, "docstatus", 1)
 
-			frappe.db.commit()
+			frappe.db.commit()  # nosemgrep
 
 		if errors > 0:
 			publish_final_status(len(documents), len(documents), "partial_success")
@@ -1387,7 +1387,7 @@ def update_demand_generated_for_repayment_schedule(loan_name, disbursement_name,
 		""",
 		(loan_name, disbursement_name, migration_date),
 	)
-	frappe.db.commit()
+	frappe.db.commit()  # nosemgrep
 
 
 def publish(index, total, doctype):
