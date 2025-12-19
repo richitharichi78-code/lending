@@ -153,9 +153,7 @@ class LoanRepaymentRepost(Document):
 				repayment_doc.docstatus = 2
 
 				repayment_doc.update_demands(cancel=1)
-
-				if repayment_doc.amount_paid <= repayment_doc.payable_amount:
-					repayment_doc.update_security_deposit_amount(cancel=1)
+				repayment_doc.update_security_deposit_amount(cancel=1)
 
 				if repayment_doc.repayment_type in ("Advance Payment", "Pre Payment"):
 					repayment_doc.cancel_loan_restructure()
@@ -177,8 +175,6 @@ class LoanRepaymentRepost(Document):
 					repayment_doc.update_repayment_schedule_status(cancel=1)
 
 			LoanRepayment = DocType("Loan Repayment")
-			Loan = DocType("Loan")
-			LoanDisbursement = DocType("Loan Disbursement")
 
 			totals = (
 				frappe.qb.from_(LoanRepayment)
@@ -243,12 +239,26 @@ class LoanRepaymentRepost(Document):
 				"loan": self.loan,
 				"docstatus": 1,
 				"is_settlement_write_off": 0,
-				"posting_date": (">=", self.repost_date),
+				"value_date": (">=", self.repost_date),
 			},
 		)
 
 		if is_written_off:
 			frappe.db.set_value("Loan", self.loan, "status", "Disbursed")
+
+		if self.cancel_future_emi_demands:
+			active_schedule = frappe.db.get_value(
+				"Loan Repayment Schedule", {"loan": self.loan, "status": "Active", "docstatus": 1}, "name"
+			)
+
+			frappe.db.sql(
+				"""
+				UPDATE `tabRepayment Schedule`
+				SET demand_generated = 0
+				WHERE parent = %s AND payment_date >= %s
+			""",
+				(active_schedule, self.repost_date),
+			)
 
 		for entry in reversed(self.get("repayment_entries", [])):
 			if entry.loan_repayment in entries_to_cancel:
