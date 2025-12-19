@@ -608,6 +608,7 @@ class LoanRepaymentSchedule(Document):
 				"Monthly as per cycle date",
 				"Line of Credit",
 				"Pro-rated calendar months",
+				"Flat Interest Rate",
 			]
 		) and self.repayment_frequency == "Monthly":
 			payment_date = add_single_month(payment_date)
