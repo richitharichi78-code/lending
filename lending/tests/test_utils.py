@@ -324,7 +324,6 @@ def create_loan_product(
 	write_off_recovery_account="Write Off Recovery - _TC",
 	interest_receivable_account="Interest Receivable - _TC",
 	penalty_receivable_account="Penalty Receivable - _TC",
-	charges_receivable_account="Charges Receivable - _TC",
 	suspense_interest_income="Suspense Income Account - _TC",
 	interest_waiver_account="Interest Waiver Account - _TC",
 	write_off_account="Write Off Account - _TC",
@@ -375,7 +374,6 @@ def create_loan_product(
 	loan_product_doc.write_off_recovery_account = write_off_recovery_account
 	loan_product_doc.interest_receivable_account = interest_receivable_account
 	loan_product_doc.penalty_receivable_account = penalty_receivable_account
-	loan_product_doc.charges_receivable_account = charges_receivable_account
 	loan_product_doc.suspense_interest_income = suspense_interest_income
 	loan_product_doc.interest_waiver_account = interest_waiver_account
 	loan_product_doc.interest_accrued_account = interest_accrued_account

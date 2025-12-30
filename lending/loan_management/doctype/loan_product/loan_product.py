@@ -70,6 +70,7 @@ class LoanProduct(Document):
 			"Pro-rated calendar months",
 			"Monthly as per cycle date",
 			"Line of Credit",
+			"Flat Interest Rate",
 		]
 		same_as_regular_interest_accounts: DF.Check
 		security_deposit_account: DF.Link | None

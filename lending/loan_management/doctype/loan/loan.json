@@ -99,7 +99,7 @@
    "fieldname": "applicant_type",
    "fieldtype": "Select",
    "label": "Applicant Type",
-   "options": "Employee\nMember\nCustomer",
+   "options": "Customer\nEmployee",
    "reqd": 1,
    "search_index": 1
   },
@@ -705,7 +705,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-08-18 15:35:40.783513",
+ "modified": "2025-12-18 10:42:35.606076",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

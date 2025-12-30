@@ -52,7 +52,7 @@ class Loan(AccountsController):
 		amended_from: DF.Link | None
 		applicant: DF.DynamicLink
 		applicant_name: DF.Data | None
-		applicant_type: DF.Literal["Employee", "Member", "Customer"]
+		applicant_type: DF.Literal["Customer", "Employee"]
 		available_limit_amount: DF.Currency
 		cancellation_date: DF.Date | None
 		classification_code: DF.Link | None
@@ -219,9 +219,19 @@ class Loan(AccountsController):
 		self.available_limit_amount = self.maximum_limit_amount
 
 	def validate_repayment_terms(self):
-		if self.is_term_loan and self.repayment_schedule_type == "Repay Over Number of Periods":
+		if self.is_term_loan and self.repayment_method == "Repay Over Number of Periods":
 			if not self.repayment_periods:
 				frappe.throw(_("Repayment periods is mandatory for term loans"))
+
+		if self.is_term_loan and self.repayment_schedule_type == "Flat Interest Rate":
+			if self.repayment_method == "Repay Fixed Amount per Period":
+				frappe.throw(
+					_("Flat Interest Rate loans cannot have 'Repay Fixed Amount per Period' repayment method")
+				)
+			if self.repayment_frequency not in ("Monthly", "Yearly"):
+				frappe.throw(
+					_("Flat Interest Rate loans can only have monthly and yearly repayment frequency")
+				)
 
 	def on_submit(self):
 		self.link_loan_security_assignment()
