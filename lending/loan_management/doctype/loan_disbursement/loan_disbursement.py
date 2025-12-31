@@ -40,6 +40,7 @@ from lending.loan_management.doctype.loan_security_release.loan_security_release
 from lending.loan_management.doctype.process_loan_interest_accrual.process_loan_interest_accrual import (
 	process_loan_interest_accrual_for_loans,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 # nosemgrep
@@ -691,39 +692,40 @@ class LoanDisbursement(LoanController):
 
 			self.add_bpi_difference_entry(gle_map)
 
-		if self.get("loan_disbursement_charges") and not cancel and not repost:
-			make_sales_invoice_for_charge(
-				self.against_loan,
-				"loan_disbursement",
-				self.name,
-				self.applicant if self.applicant_type == "Customer" else None,
-				self.disbursement_date,
-				self.company,
-				self.get("loan_disbursement_charges"),
-			)
+		if loan_accounting_enabled(self.company):
+			if self.get("loan_disbursement_charges") and not cancel and not repost:
+				make_sales_invoice_for_charge(
+					self.against_loan,
+					"loan_disbursement",
+					self.name,
+					self.applicant if self.applicant_type == "Customer" else None,
+					self.disbursement_date,
+					self.company,
+					self.get("loan_disbursement_charges"),
+				)
 
-		filters = {"loan": self.against_loan, "docstatus": 1, "is_return": 0}
-		if cancel:
-			filters["is_return"] = 1
-		else:
-			filters["loan_disbursement"] = self.name
+			filters = {"loan": self.against_loan, "docstatus": 1, "is_return": 0}
+			if cancel:
+				filters["is_return"] = 1
+			else:
+				filters["loan_disbursement"] = self.name
 
-		sales_invoices = frappe.db.get_all(
-			"Sales Invoice",
-			filters=filters,
-			fields=["name", "debit_to", "grand_total"],
-		)
-
-		for invoice in sales_invoices:
-			self.add_gl_entry(
-				gle_map,
-				invoice.debit_to,
-				bank_account,
-				-1 * abs(invoice.grand_total),
-				remarks,
+			sales_invoices = frappe.db.get_all(
 				"Sales Invoice",
-				invoice.name,
+				filters=filters,
+				fields=["name", "debit_to", "grand_total"],
 			)
+
+			for invoice in sales_invoices:
+				self.add_gl_entry(
+					gle_map,
+					invoice.debit_to,
+					bank_account,
+					-1 * abs(invoice.grand_total),
+					remarks,
+					"Sales Invoice",
+					invoice.name,
+				)
 
 		if self.loan_partner:
 			loan_partner_details = get_loan_partner_details(self.loan_partner)

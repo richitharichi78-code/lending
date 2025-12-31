@@ -24,6 +24,7 @@ from lending.loan_management.doctype.loan_security_assignment.loan_security_assi
 from lending.loan_management.doctype.loan_security_shortfall.loan_security_shortfall import (
 	update_shortfall_status,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanRepayment(LoanController):
@@ -205,7 +206,7 @@ class LoanRepayment(LoanController):
 
 		reversed_accruals = []
 
-		if self.get("prepayment_charges"):
+		if self.get("prepayment_charges") and loan_accounting_enabled(self.company):
 			make_sales_invoice_for_charge(
 				self.against_loan,
 				"loan_repayment",

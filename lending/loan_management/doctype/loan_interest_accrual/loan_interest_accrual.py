@@ -22,6 +22,7 @@ from frappe.utils import (
 
 from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_demand.loan_demand import create_loan_demand
+from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
@@ -147,12 +148,12 @@ class LoanInterestAccrual(LoanController):
 	def on_cancel(self):
 		self.make_gl_entries(cancel=1)
 
-		if self.normal_interest_journal_entry:
+		if self.normal_interest_journal_entry and loan_accounting_enabled(self.company):
 			doc = frappe.get_doc("Journal Entry", self.normal_interest_journal_entry)
 			doc.flags.ignore_links = True
 			doc.cancel()
 
-		if self.additional_interest_suspense_entry:
+		if self.additional_interest_suspense_entry and loan_accounting_enabled(self.company):
 			doc = frappe.get_doc("Journal Entry", self.additional_interest_suspense_entry)
 			doc.flags.ignore_links = True
 			doc.cancel()

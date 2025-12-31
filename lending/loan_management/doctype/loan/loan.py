@@ -32,6 +32,7 @@ from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
@@ -1519,6 +1520,9 @@ def make_suspense_journal_entry(
 	is_penal=False,
 	additional_interest=0,
 ):
+	if not loan_accounting_enabled(company):
+		return None, None
+
 	account_details = frappe.get_value(
 		"Loan Product",
 		loan_product,
@@ -1657,6 +1661,9 @@ def make_journal_entry(
 
 	if not flt(amount, precision):
 		return
+
+	if not loan_accounting_enabled(company):
+		return None
 
 	# Swap Accounts
 	if is_reverse:
