@@ -1,8 +1,6 @@
 # Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-import unittest
-
 import frappe
 from frappe.query_builder import DocType
 from frappe.query_builder import functions as fn
@@ -73,7 +71,7 @@ from lending.tests.test_utils import (
 )
 
 
-class TestLoan(unittest.TestCase):
+class TestLoan(IntegrationTestCase):
 	def setUp(self):
 		set_loan_settings_in_company()
 		create_loan_accounts()
