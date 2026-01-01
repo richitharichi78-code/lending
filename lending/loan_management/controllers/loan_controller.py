@@ -9,5 +9,4 @@ class LoanController(AccountsController):
 		if not loan_accounting_enabled(self.company):
 			return
 
-		# Call ERPNext's native GL entry function directly
 		return make_gl_entries(*args, **kwargs)
