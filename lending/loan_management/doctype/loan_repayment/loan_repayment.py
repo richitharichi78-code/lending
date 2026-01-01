@@ -3009,7 +3009,6 @@ def get_latest_accrual_date(
 
 def get_unbooked_interest(loan, posting_date, loan_disbursement=None, last_demand_date=None):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
-	balance_interest = 0
 
 	accrued_interest = get_accrued_interest(
 		loan, posting_date, loan_disbursement=loan_disbursement, last_demand_date=last_demand_date
@@ -3201,7 +3200,7 @@ def bulk_repost(grouped_by_loan_and_loan_disbursement, trace_id):
 					raise e
 
 				bulk_repayment_log.status = "Success"
-			except Exception as e:
+			except Exception:
 				frappe.db.rollback()
 				traceback_per_loan = traceback.format_exc()
 
