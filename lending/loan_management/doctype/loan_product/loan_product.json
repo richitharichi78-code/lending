@@ -308,11 +308,12 @@
    "unique": 1
   },
   {
+   "default": "0",
+   "depends_on": "eval:doc.is_term_loan && doc.repayment_schedule_type == \"Monthly as per cycle date\"",
    "fieldname": "min_days_bw_disbursement_first_repayment",
    "fieldtype": "Int",
    "label": "Minimum days between Disbursement date and first Repayment date",
-   "non_negative": 1,
-   "reqd": 1
+   "non_negative": 1
   },
   {
    "collapsible": 1,
@@ -467,13 +468,15 @@
    "fieldname": "collection_offset_sequence_for_standard_asset",
    "fieldtype": "Link",
    "label": "Collection Offset Sequence for Standard Asset",
-   "options": "Loan Demand Offset Order"
+   "options": "Loan Demand Offset Order",
+   "reqd": 1
   },
   {
    "fieldname": "collection_offset_sequence_for_sub_standard_asset",
    "fieldtype": "Link",
    "label": "Collection Offset Sequence for Sub Standard Asset",
-   "options": "Loan Demand Offset Order"
+   "options": "Loan Demand Offset Order",
+   "reqd": 1
   },
   {
    "fieldname": "collection_offset_sequence_for_written_off_asset",
@@ -532,7 +535,7 @@
  ],
  "index_web_pages_for_search": 1,
  "links": [],
- "modified": "2025-10-27 20:35:15.992310",
+ "modified": "2026-01-01 15:53:56.751167",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Product",
