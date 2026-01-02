@@ -177,7 +177,6 @@ class TestLoan(IntegrationTestCase):
 		frappe.db.set_value(
 			"Loan Product", "Demand Loan", "customer_refund_account", "Customer Refund Account - _TC"
 		)
-		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 1)
 
 	def test_loan_with_repayment_periods(self):
 		posting_date = "2025-01-27"

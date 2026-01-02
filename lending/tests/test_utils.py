@@ -784,10 +784,12 @@ def create_loan_partner(
 def set_loan_settings_in_company(company=None):
 	if not company:
 		company = "_Test Company"
+
 	company = frappe.get_doc("Company", company)
 	company.min_days_bw_disbursement_first_repayment = 15
 	company.save()
 
+	frappe.db.set_value("Company", company, "enable_loan_accounting", 1)
 
 def setup_loan_demand_offset_order(company=None):
 	if not company:
