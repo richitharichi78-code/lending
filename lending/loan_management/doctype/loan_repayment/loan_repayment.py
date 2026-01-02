@@ -99,7 +99,6 @@ class LoanRepayment(AccountsController):
 			"Interest Waiver",
 			"Penalty Waiver",
 			"Charges Waiver",
-			"Principal Capitalization",
 			"Principal Adjustment",
 			"Interest Carry Forward",
 			"Write Off Recovery",
@@ -112,6 +111,9 @@ class LoanRepayment(AccountsController):
 			"Full Settlement",
 			"Write Off Settlement",
 			"Charge Payment",
+			"Penalty Capitalization",
+			"Interest Capitalization",
+			"Charges Capitalization",
 		]
 		shortfall_amount: DF.Currency
 		total_charges_paid: DF.Currency
@@ -2218,7 +2220,6 @@ class LoanRepayment(AccountsController):
 		)
 
 	def get_payment_account(self):
-
 		if self.repayment_type == "Charges Waiver":
 			return
 
@@ -2226,13 +2227,14 @@ class LoanRepayment(AccountsController):
 			"Interest Waiver": "interest_waiver_account",
 			"Penalty Waiver": "penalty_waiver_account",
 			"Additional Interest Waiver": "additional_interest_waiver",
-			"Principal Capitalization": "loan_account",
 			"Loan Closure": "payment_account",
 			"Principal Adjustment": "loan_account",
 			"Interest Adjustment": "security_deposit_account",
-			"Interest Carry Forward": "interest_income_account",
 			"Security Deposit Adjustment": "security_deposit_account",
 			"Subsidy Adjustments": "subsidy_adjustment_account",
+			"Interest Capitalization": "loan_account",
+			"Penalty Capitalization": "loan_account",
+			"Charges Capitalization": "loan_account",
 		}
 
 		if self.repayment_type in (
@@ -2257,8 +2259,10 @@ class LoanRepayment(AccountsController):
 				self.loan_product,
 				payment_account_field_map.get(self.repayment_type),
 			)
+
 		if not payment_account:
 			frappe.throw(_("Payment Account is mandatory"))
+
 		return payment_account
 
 	def get_charges_waiver_account(self, loan_product, charge):
@@ -2556,13 +2560,13 @@ def get_demand_type(payment_type):
 	demand_type = None
 	demand_subtype = None
 
-	if payment_type == "Interest Waiver":
+	if payment_type in ("Interest Waiver", "Interest Capitalization"):
 		demand_type = "EMI"
 		demand_subtype = "Interest"
-	elif payment_type == "Penalty Waiver":
+	elif payment_type in ("Penalty Waiver", "Penalty Capitalization"):
 		demand_type = "Penalty"
 		demand_subtype = "Penalty"
-	elif payment_type in ("Charges Waiver", "Charge Payment"):
+	elif payment_type in ("Charges Waiver", "Charge Payment", "Charges Capitalization"):
 		demand_type = "Charges"
 	elif payment_type == "Advance Payment":
 		demand_type = "EMI"
@@ -3005,7 +3009,6 @@ def get_latest_accrual_date(
 
 def get_unbooked_interest(loan, posting_date, loan_disbursement=None, last_demand_date=None):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
-	balance_interest = 0
 
 	accrued_interest = get_accrued_interest(
 		loan, posting_date, loan_disbursement=loan_disbursement, last_demand_date=last_demand_date
@@ -3197,7 +3200,7 @@ def bulk_repost(grouped_by_loan_and_loan_disbursement, trace_id):
 					raise e
 
 				bulk_repayment_log.status = "Success"
-			except Exception as e:
+			except Exception:
 				frappe.db.rollback()
 				traceback_per_loan = traceback.format_exc()
 
