@@ -9,6 +9,7 @@ import erpnext
 
 from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_repayment.loan_repayment import get_net_paid_amount
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanRefund(LoanController):
@@ -123,6 +124,9 @@ class LoanRefund(LoanController):
 			frappe.db.set_value("Loan Repayment Schedule", schedule, "status", "Closed")
 
 	def make_gl_entries(self, cancel=0):
+		if not loan_accounting_enabled(self.company):
+			return
+
 		gl_entries = []
 		loan_details = frappe.db.get_value(
 			"Loan Product",

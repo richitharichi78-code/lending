@@ -7,6 +7,7 @@ from frappe.utils import add_days, cint, flt, get_datetime, getdate
 
 from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_repayment.loan_repayment import update_installment_counts
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanDemand(LoanController):
@@ -117,6 +118,9 @@ class LoanDemand(LoanController):
 			)
 
 	def make_gl_entries(self, cancel=0):
+		if not loan_accounting_enabled(self.company):
+			return
+
 		gl_entries = []
 
 		if self.demand_subtype == "Principal":

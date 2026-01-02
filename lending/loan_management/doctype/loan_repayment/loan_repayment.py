@@ -1927,6 +1927,10 @@ class LoanRepayment(LoanController):
 			super().make_gl_entries(gle_map, merge_entries=merge_entries, cancel=cancel, adv_adj=adv_adj)
 
 	def get_gl_map(self):
+
+		if not loan_accounting_enabled(self.company):
+			return
+
 		precision = cint(frappe.db.get_default("currency_precision")) or 2
 		gle_map = []
 		payment_account = self.get_payment_account()

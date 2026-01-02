@@ -161,8 +161,10 @@ class LoanInterestAccrual(LoanController):
 		self.ignore_linked_doctypes = ["GL Entry", "Payment Ledger Entry"]
 
 	def make_gl_entries(self, cancel=0, adv_adj=0):
-		gle_map = []
+		if not loan_accounting_enabled(self.company):
+			return
 
+		gle_map = []
 		loan_status = frappe.db.get_value("Loan", self.loan, "status")
 
 		if loan_status == "Written Off":

@@ -14,6 +14,7 @@ from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_repayment.loan_repayment import (
 	get_pending_principal_amount,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanWriteOff(LoanController):
@@ -191,6 +192,9 @@ class LoanWriteOff(LoanController):
 		frappe.db.set_value("Loan", self.loan, update_values)
 
 	def make_gl_entries(self, cancel=0):
+		if not loan_accounting_enabled(self.company):
+			return
+
 		gl_entries = []
 		loan_details = frappe.db.get_value(
 			"Loan", self.loan, ["loan_account", "applicant_type", "applicant"], as_dict=1

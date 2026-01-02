@@ -640,6 +640,9 @@ class LoanDisbursement(LoanController):
 		)
 
 	def make_gl_entries(self, cancel=0, adv_adj=0, repost=0):
+		if not loan_accounting_enabled(self.company):
+			return
+
 		gle_map = []
 		remarks = _("Disbursement against loan:") + self.against_loan
 

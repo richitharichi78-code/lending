@@ -168,6 +168,9 @@ class Loan(AccountsController):
 				)
 
 	def validate_accounts(self):
+		if not loan_accounting_enabled(self.company):
+			return
+
 		for fieldname in [
 			"payment_account",
 			"loan_account",
