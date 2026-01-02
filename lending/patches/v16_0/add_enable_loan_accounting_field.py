@@ -10,9 +10,12 @@ def execute():
 					"fieldname": "enable_loan_accounting",
 					"label": "Enable Loan Accounting",
 					"fieldtype": "Check",
-					"insert_after": "loan_settings",
-					"default": 1,
+					"insert_after": "loan_column_break",
 				}
 			]
 		}
 		create_custom_fields(custom_fields, update=True)
+
+	companies = frappe.get_all("Company", pluck="name")
+	for company in companies:
+		frappe.db.set_value("Company", company, "enable_loan_accounting", 1)

@@ -52,13 +52,6 @@ LOAN_CUSTOM_FIELDS = {
 			"insert_after": "loan_tab",
 		},
 		{
-			"fieldname": "enable_loan_accounting",
-			"label": "Enable Loan Accounting",
-			"fieldtype": "Check",
-			"insert_after": "loan_settings",
-			"default": 1,
-		},
-		{
 			"fieldname": "loan_restructure_limit",
 			"label": "Restructure Limit % (Overall)",
 			"fieldtype": "Percent",
@@ -97,11 +90,17 @@ LOAN_CUSTOM_FIELDS = {
 			"insert_after": "loan_accrual_frequency",
 		},
 		{
+			"fieldname": "enable_loan_accounting",
+			"label": "Enable Loan Accounting",
+			"fieldtype": "Check",
+			"insert_after": "loan_column_break",
+		},
+		{
 			"fieldname": "collection_offset_logic_based_on",
 			"label": "Collection Offset Logic Based On",
 			"fieldtype": "Select",
 			"options": "NPA Flag\nDays Past Due",
-			"insert_after": "loan_column_break",
+			"insert_after": "enable_loan_accounting",
 		},
 		{
 			"fieldname": "days_past_due_threshold",
