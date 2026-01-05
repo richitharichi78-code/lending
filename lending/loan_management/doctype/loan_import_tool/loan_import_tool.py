@@ -889,7 +889,6 @@ def create_loan_import_log(
 
 
 def start_loan_import(documents, import_type, import_tool_name, import_for):
-	errors = 0
 	success_count = 0
 	failed_loans = []
 
@@ -1229,8 +1228,6 @@ def start_loan_repayment_import(documents, import_tool_name, import_for):
 	created_repayments = []
 
 	try:
-		loan_import_tool = frappe.new_doc("Loan Import Tool")
-
 		values = []
 		now = frappe.utils.now()
 		user = frappe.session.user
