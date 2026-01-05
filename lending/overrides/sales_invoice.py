@@ -9,9 +9,13 @@ from erpnext.accounts.general_ledger import make_gl_entries
 from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
 	create_loan_demand,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 def generate_demand(self, method=None):
+	if not loan_accounting_enabled(self.company):
+		return
+
 	if self.get("loan") and not self.get("loan_disbursement") and not self.get("is_return"):
 		total_demand_amount = 0
 		total_items = len(self.get("items") or [])
@@ -60,7 +64,8 @@ def update_waived_amount_in_demand(self, method=None):
 			)
 
 			if demand_details:
-				if flt(demand_details.outstanding_amount) - flt(waived_amount) < 0:
+				# Ignore 0.1 difference due to precision loss
+				if flt(demand_details.outstanding_amount) - flt(waived_amount) < -0.1:
 					frappe.throw(
 						_("Waived amount {0} cannot be greater than outstanding amount {1}").format(
 							flt(waived_amount), flt(demand_details.outstanding_amount)
@@ -126,7 +131,8 @@ def make_partner_charge_gl_entries(doc, method):
 						doc, item, tax_amount, tax.account_head, partner_payable_account, gl_entries
 					)
 
-		make_gl_entries(gl_entries)
+		if loan_accounting_enabled(doc.company):
+			make_gl_entries(gl_entries)
 
 
 def make_suspense_gl_entry_for_charges(doc, method):
@@ -173,6 +179,9 @@ def make_partner_gl_entries(
 
 
 def cancel_demand(self, method=None):
+	if not loan_accounting_enabled(self.company):
+		return
+
 	if self.get("loan"):
 		demand = frappe.db.get_value("Loan Demand", {"sales_invoice": self.name})
 		if demand:

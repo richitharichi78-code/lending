@@ -32,6 +32,7 @@ from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
+from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
@@ -52,7 +53,7 @@ class Loan(AccountsController):
 		amended_from: DF.Link | None
 		applicant: DF.DynamicLink
 		applicant_name: DF.Data | None
-		applicant_type: DF.Literal["Employee", "Member", "Customer"]
+		applicant_type: DF.Literal["Customer", "Employee"]
 		available_limit_amount: DF.Currency
 		cancellation_date: DF.Date | None
 		classification_code: DF.Link | None
@@ -64,21 +65,20 @@ class Loan(AccountsController):
 		days_past_due: DF.Int
 		debit_adjustment_amount: DF.Currency
 		disbursed_amount: DF.Currency
-		disbursement_account: DF.Link
+		disbursement_account: DF.Link | None
 		disbursement_date: DF.Date | None
 		excess_amount_paid: DF.Currency
 		fldg_trigger_date: DF.Date | None
 		fldg_triggered: DF.Check
 		freeze_account: DF.Check
 		freeze_date: DF.Date | None
-		interest_income_account: DF.Link
-		is_imported: DF.Check
+		interest_income_account: DF.Link | None
 		is_npa: DF.Check
 		is_secured_loan: DF.Check
 		is_term_loan: DF.Check
 		limit_applicable_end: DF.Date | None
 		limit_applicable_start: DF.Date | None
-		loan_account: DF.Link
+		loan_account: DF.Link | None
 		loan_amount: DF.Currency
 		loan_application: DF.Link | None
 		loan_category: DF.Link | None
@@ -93,9 +93,9 @@ class Loan(AccountsController):
 		monthly_repayment_amount: DF.Currency
 		moratorium_tenure: DF.Int
 		moratorium_type: DF.Literal["", "EMI", "Principal"]
-		payment_account: DF.Link
+		payment_account: DF.Link | None
 		penalty_charges_rate: DF.Percent
-		penalty_income_account: DF.Link
+		penalty_income_account: DF.Link | None
 		posting_date: DF.Date
 		rate_of_interest: DF.Percent
 		refund_amount: DF.Currency
@@ -173,6 +173,9 @@ class Loan(AccountsController):
 				)
 
 	def validate_accounts(self):
+		if not loan_accounting_enabled(self.company):
+			return
+
 		for fieldname in [
 			"payment_account",
 			"loan_account",
@@ -225,9 +228,19 @@ class Loan(AccountsController):
 		self.available_limit_amount = self.maximum_limit_amount
 
 	def validate_repayment_terms(self):
-		if self.is_term_loan and self.repayment_schedule_type == "Repay Over Number of Periods":
+		if self.is_term_loan and self.repayment_method == "Repay Over Number of Periods":
 			if not self.repayment_periods:
 				frappe.throw(_("Repayment periods is mandatory for term loans"))
+
+		if self.is_term_loan and self.repayment_schedule_type == "Flat Interest Rate":
+			if self.repayment_method == "Repay Fixed Amount per Period":
+				frappe.throw(
+					_("Flat Interest Rate loans cannot have 'Repay Fixed Amount per Period' repayment method")
+				)
+			if self.repayment_frequency not in ("Monthly", "Yearly"):
+				frappe.throw(
+					_("Flat Interest Rate loans can only have monthly and yearly repayment frequency")
+				)
 
 	def on_submit(self):
 		self.link_loan_security_assignment()
@@ -1515,6 +1528,9 @@ def make_suspense_journal_entry(
 	is_penal=False,
 	additional_interest=0,
 ):
+	if not loan_accounting_enabled(company):
+		return None, None
+
 	account_details = frappe.get_value(
 		"Loan Product",
 		loan_product,
@@ -1653,6 +1669,9 @@ def make_journal_entry(
 
 	if not flt(amount, precision):
 		return
+
+	if not loan_accounting_enabled(company):
+		return None
 
 	# Swap Accounts
 	if is_reverse:

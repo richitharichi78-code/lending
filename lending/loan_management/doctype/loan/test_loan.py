@@ -1,7 +1,6 @@
 # Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-
 import frappe
 from frappe.query_builder import DocType
 from frappe.query_builder import functions as fn
@@ -18,7 +17,6 @@ from frappe.utils import (
 )
 
 from erpnext.selling.doctype.customer.test_customer import get_customer_dict
-from erpnext.setup.doctype.employee.test_employee import make_employee
 
 from lending.loan_management.doctype.loan.loan import request_loan_closure, unpledge_security
 from lending.loan_management.doctype.loan_application.loan_application import (
@@ -30,10 +28,7 @@ from lending.loan_management.doctype.loan_disbursement.loan_disbursement import 
 from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
 	days_in_year,
 )
-from lending.loan_management.doctype.loan_repayment.loan_repayment import (
-	calculate_amounts,
-	post_bulk_payments,
-)
+from lending.loan_management.doctype.loan_repayment.loan_repayment import calculate_amounts
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
@@ -97,7 +92,11 @@ class TestLoan(IntegrationTestCase):
 			["Term Loan Product 5", 3000000, 25, "Line of Credit"],
 		]
 
-		for loan_product in simple_terms_loans:
+		flat_interest_rate_loans = [
+			["Flat Interest Rate Loan", 1000000, 12, "Flat Interest Rate"],
+		]
+
+		for loan_product in simple_terms_loans + flat_interest_rate_loans + loc_loans:
 			create_loan_product(
 				loan_product[0],
 				loan_product[0],
@@ -115,15 +114,6 @@ class TestLoan(IntegrationTestCase):
 				repayment_schedule_type=loan_product[3],
 			)
 			add_or_update_loan_charges(loan_product[0])
-
-		for loan_product in loc_loans:
-			create_loan_product(
-				loan_product[0],
-				loan_product[0],
-				loan_product[1],
-				loan_product[2],
-				repayment_schedule_type=loan_product[3],
-			)
 
 		for loan_product in pro_rated_term_loans:
 			create_loan_product(
@@ -839,10 +829,6 @@ class TestLoan(IntegrationTestCase):
 		no_of_days = date_diff(last_date, first_date) + 1
 
 		no_of_days += 5
-
-		accrued_interest_amount = (loan.loan_amount * loan.rate_of_interest * no_of_days) / (
-			days_in_year(get_datetime(first_date).year) * 100
-		)
 
 		make_loan_disbursement_entry(loan.name, loan.loan_amount, disbursement_date=first_date)
 		process_loan_interest_accrual_for_loans(
@@ -2247,17 +2233,17 @@ class TestLoan(IntegrationTestCase):
 
 		process_daily_loan_demands(posting_date="2024-10-05", loan=loan.name)
 
-		repayment_entry_1 = create_repayment_entry(
+		create_repayment_entry(
 			loan.name, "2024-10-05", 3000, loan_disbursement=loan_disbursement
 		).submit()
-		repayment_entry_2 = create_repayment_entry(
+		create_repayment_entry(
 			loan.name, "2024-10-09", 782, loan_disbursement=loan_disbursement
 		).submit()
 
 		process_daily_loan_demands(posting_date="2024-11-05", loan=loan.name)
 
-		repayment_entry_3 = create_repayment_entry(loan.name, "2024-11-05", 3000).submit()
-		repayment_entry_4 = create_repayment_entry(loan.name, "2024-11-10", 782).submit()
+		create_repayment_entry(loan.name, "2024-11-05", 3000).submit()
+		create_repayment_entry(loan.name, "2024-11-10", 782).submit()
 
 		create_process_loan_classification(
 			posting_date="2024-10-05", loan=loan.name, loan_disbursement=loan_disbursement
@@ -2801,8 +2787,6 @@ class TestLoan(IntegrationTestCase):
 		)
 
 	def test_normal_loan_repayment_schedule_close(self):
-		from erpnext.selling.doctype.customer.test_customer import get_customer_dict
-
 		loan = create_loan(
 			"_Test Customer 1",
 			"Term Loan Product 4",
@@ -3470,3 +3454,103 @@ class TestLoan(IntegrationTestCase):
 			flt(repayment.excess_amount, 2),
 			flt(repayment.amount_paid - repayment.pending_principal_amount - interest_waiver_amount, 2),
 		)
+
+	def test_loan_accounting_disabled(self):
+		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 0)
+
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			100000,
+			"Repay Over Number of Periods",
+			6,
+			"Customer",
+			"2024-07-15",
+			"2024-06-25",
+			10,
+		)
+		loan.submit()
+
+		make_loan_disbursement_entry(
+			loan.name, loan.loan_amount, disbursement_date="2024-06-25", repayment_start_date="2024-07-15"
+		)
+		process_daily_loan_demands(posting_date="2025-01-05", loan=loan.name)
+
+		amounts = calculate_amounts(against_loan=loan.name, posting_date="2025-01-16")
+		payable_amount = round(float(amounts["payable_amount"] or 0.0), 2)
+
+		repayment_entry = create_repayment_entry(
+			loan.name, get_datetime("2025-01-16 00:03:10"), payable_amount
+		)
+		repayment_entry.submit()
+
+		gl_entries = frappe.db.get_all(
+			"GL Entry",
+			filters={"against_voucher_type": "Loan", "against_voucher": loan.name},
+		)
+
+		self.assertEqual(len(gl_entries), 0)
+
+	def test_flat_rate_interest_method(self):
+		loan = create_loan(
+			"_Test Customer 1",
+			"Flat Interest Rate Loan",
+			50000,
+			"Repay Over Number of Periods",
+			12,
+			"Customer",
+			repayment_start_date="2024-11-01",
+			posting_date="2024-10-01",
+			rate_of_interest=10,
+		)
+
+		loan.submit()
+
+		make_loan_disbursement_entry(
+			loan.name, loan.loan_amount, disbursement_date="2024-10-01", repayment_start_date="2024-11-01"
+		)
+
+		expected_repayment_schedule = [
+			["2024-11-01", 3979.33, 416.67, 4396],
+			["2024-12-01", 3979.33, 416.67, 4396],
+			["2025-01-01", 3979.33, 416.67, 4396],
+			["2025-02-01", 3979.33, 416.67, 4396],
+			["2025-03-01", 3979.33, 416.67, 4396],
+			["2025-04-01", 3979.33, 416.67, 4396],
+			["2025-05-01", 3979.33, 416.67, 4396],
+			["2025-06-01", 3979.33, 416.67, 4396],
+			["2025-07-01", 3979.33, 416.67, 4396],
+			["2025-08-01", 3979.33, 416.67, 4396],
+			["2025-09-01", 3979.33, 416.67, 4396],
+			["2025-10-01", 6227.37, 416.67, 6644.04],
+		]
+
+		repayment_schedule = frappe.get_doc(
+			"Loan Repayment Schedule", {"loan": loan.name, "docstatus": 1, "status": "Active"}
+		)
+
+		for idx, schedule in enumerate(repayment_schedule.repayment_schedule):
+			(
+				expected_date,
+				expected_principal,
+				expected_interest,
+				expected_total,
+			) = expected_repayment_schedule[idx]
+			self.assertEqual(
+				getdate(schedule.payment_date), getdate(expected_date), f"Due date mismatch at index {idx}"
+			)
+			self.assertEqual(
+				flt(schedule.principal_amount, 2),
+				flt(expected_principal, 2),
+				msg=f"Principal amount mismatch at index {idx}",
+			)
+			self.assertEqual(
+				flt(schedule.interest_amount, 2),
+				flt(expected_interest),
+				msg=f"Interest amount mismatch at index {idx}",
+			)
+			self.assertEqual(
+				flt(schedule.total_payment, 2),
+				flt(expected_total, 2),
+				msg=f"Total amount mismatch at index {idx}",
+			)

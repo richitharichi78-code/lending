@@ -24,6 +24,7 @@ from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual
 from lending.loan_management.doctype.loan_repayment_schedule.utils import (
 	add_single_month,
 	get_amounts,
+	get_flat_monthly_repayment_amount,
 	get_loan_partner_details,
 	get_monthly_repayment_amount,
 	set_demand,
@@ -131,8 +132,9 @@ class LoanRepaymentSchedule(Document):
 		)
 
 		advance_payment = ""
-		if not self.restructure_type in ("Advance Payment", "Pre Payment"):
+		if self.restructure_type not in ("Advance Payment", "Pre Payment"):
 			return
+
 		for row in self.repayment_schedule:
 			if not row.demand_generated:
 				advance_payment = row
@@ -166,8 +168,8 @@ class LoanRepaymentSchedule(Document):
 			prepayment_details.adjusted_unaccrued_interest
 			and prepayment_details.adjusted_unaccrued_interest < prepayment_details.unaccrued_interest
 		):
-			interest_amount = prepayment_details.unaccrued_interest
-			paid_interest_amount = prepayment_details.adjusted_unaccrued_interest
+			interest_amount = prepayment_details.adjusted_unaccrued_interest
+			paid_interest_amount = interest_amount
 
 		if flt(interest_amount) > 0:
 			create_loan_demand(
@@ -384,7 +386,13 @@ class LoanRepaymentSchedule(Document):
 		payment_date = self.repayment_start_date
 		carry_forward_interest = self.adjusted_interest
 		moratorium_interest = 0
+		is_first_emi = True
 		row = 0
+
+		if self.repayment_schedule_type == "Flat Interest Rate":
+			monthly_repayment_amount = get_flat_monthly_repayment_amount(
+				balance_amount, rate_of_interest, self.repayment_periods, self.repayment_frequency
+			)
 		if not self.restructure_type and self.repayment_method != "Repay Fixed Amount per Period":
 			monthly_repayment_amount = get_monthly_repayment_amount(
 				balance_amount, rate_of_interest, self.repayment_periods, self.repayment_frequency
@@ -392,18 +400,7 @@ class LoanRepaymentSchedule(Document):
 		else:
 			monthly_repayment_amount = self.monthly_repayment_amount
 
-		if not self.restructure_type:
-			if (
-				self.moratorium_tenure
-				and self.repayment_frequency == "Monthly"
-				and self.repayment_schedule_type == "Monthly as per cycle date"
-			):
-				payment_date = self.repayment_start_date
-				self.moratorium_end_date = add_months(self.repayment_start_date, self.moratorium_tenure - 1)
-			elif self.moratorium_tenure and self.repayment_frequency == "Monthly":
-				self.moratorium_end_date = add_months(self.repayment_start_date, self.moratorium_tenure)
-				if self.repayment_schedule_type == "Pro-rated calendar months":
-					self.moratorium_end_date = add_days(self.moratorium_end_date, -1)
+		payment_date = self.set_moratorium_end_date(payment_date)
 
 		tenure = self.get_applicable_tenure(payment_date)
 		additional_days = cint(self.broken_period_interest_days)
@@ -418,25 +415,15 @@ class LoanRepaymentSchedule(Document):
 			"Loan Product", self.loan_product, "bpi_recovery_method"
 		)
 
-		amortized_bpi = 0
-		first_emi_adjustment = 0
-
-		if bpi_recovery_method in ["Amortized Over Tenure", "Add to First EMI"]:
-			broken_period_interest = self.add_broken_period_interest(
-				balance_amount,
-				rate_of_interest,
-				self.broken_period_interest_days,
-				payment_date,
-				schedule_field,
-				principal_share_percentage,
-				interest_share_percentage,
-			)
-		if bpi_recovery_method == "Amortized Over Tenure":
-			amortized_bpi = flt(broken_period_interest) / self.repayment_periods
-		elif bpi_recovery_method == "Add to First EMI":
-			first_emi_adjustment = broken_period_interest
-
-		is_first_emi = True
+		amortized_bpi, first_emi_adjustment = self.apply_broken_period_interest_method(
+			bpi_recovery_method,
+			balance_amount,
+			rate_of_interest,
+			payment_date,
+			schedule_field,
+			principal_share_percentage,
+			interest_share_percentage,
+		)
 
 		while balance_amount > 0:
 			if self.moratorium_tenure and self.repayment_frequency == "Monthly":
@@ -481,6 +468,8 @@ class LoanRepaymentSchedule(Document):
 				previous_interest_amount,
 				additional_principal_amount,
 				pending_prev_days,
+				flat_rate=True if self.repayment_schedule_type == "Flat Interest Rate" else False,
+				loan_amount=self.loan_amount,
 			)
 
 			if (
@@ -566,6 +555,52 @@ class LoanRepaymentSchedule(Document):
 		else:
 			self.repayment_periods = self.number_of_rows
 
+	def set_moratorium_end_date(self, payment_date):
+		if not self.restructure_type:
+			if (
+				self.moratorium_tenure
+				and self.repayment_frequency == "Monthly"
+				and self.repayment_schedule_type == "Monthly as per cycle date"
+			):
+				payment_date = self.repayment_start_date
+				self.moratorium_end_date = add_months(self.repayment_start_date, self.moratorium_tenure - 1)
+			elif self.moratorium_tenure and self.repayment_frequency == "Monthly":
+				self.moratorium_end_date = add_months(self.repayment_start_date, self.moratorium_tenure)
+				if self.repayment_schedule_type == "Pro-rated calendar months":
+					self.moratorium_end_date = add_days(self.moratorium_end_date, -1)
+
+		return payment_date
+
+	def apply_broken_period_interest_method(
+		self,
+		bpi_recovery_method,
+		balance_amount,
+		rate_of_interest,
+		payment_date,
+		schedule_field,
+		principal_share_percentage,
+		interest_share_percentage,
+	):
+		amortized_bpi = 0
+		first_emi_adjustment = 0
+
+		if bpi_recovery_method in ["Amortized Over Tenure", "Add to First EMI"]:
+			broken_period_interest = self.add_broken_period_interest(
+				balance_amount,
+				rate_of_interest,
+				self.broken_period_interest_days,
+				payment_date,
+				schedule_field,
+				principal_share_percentage,
+				interest_share_percentage,
+			)
+		if bpi_recovery_method == "Amortized Over Tenure":
+			amortized_bpi = flt(broken_period_interest) / self.repayment_periods
+		elif bpi_recovery_method == "Add to First EMI":
+			first_emi_adjustment = broken_period_interest
+
+		return amortized_bpi, first_emi_adjustment
+
 	def get_next_payment_date(self, payment_date):
 		if (
 			self.repayment_schedule_type
@@ -574,6 +609,7 @@ class LoanRepaymentSchedule(Document):
 				"Monthly as per cycle date",
 				"Line of Credit",
 				"Pro-rated calendar months",
+				"Flat Interest Rate",
 			]
 		) and self.repayment_frequency == "Monthly":
 			payment_date = add_single_month(payment_date)
@@ -928,7 +964,9 @@ class LoanRepaymentSchedule(Document):
 						interest_share_percentage=interest_share_percentage,
 					)
 					additional_days = 0
-
+			elif self.repayment_schedule_type == "Flat Interest Rate":
+				days = 1
+				months = self.repayment_periods
 			elif expected_payment_date == payment_date:
 				if self.repayment_schedule_type == "Pro-rated calendar months":
 					if payment_date == self.repayment_start_date:

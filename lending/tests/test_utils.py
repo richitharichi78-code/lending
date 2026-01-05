@@ -255,6 +255,14 @@ def create_loan_accounts():
 	)
 
 	create_account(
+		"Charge Income Account",
+		"Direct Income - _TC",
+		"Income",
+		"Income Account",
+		"Profit and Loss",
+	)
+
+	create_account(
 		"Processing Fee Receivable Account",
 		"Loans and Advances (Assets) - _TC",
 		"Asset",
@@ -324,7 +332,6 @@ def create_loan_product(
 	write_off_recovery_account="Write Off Recovery - _TC",
 	interest_receivable_account="Interest Receivable - _TC",
 	penalty_receivable_account="Penalty Receivable - _TC",
-	charges_receivable_account="Charges Receivable - _TC",
 	suspense_interest_income="Suspense Income Account - _TC",
 	interest_waiver_account="Interest Waiver Account - _TC",
 	write_off_account="Write Off Account - _TC",
@@ -375,7 +382,6 @@ def create_loan_product(
 	loan_product_doc.write_off_recovery_account = write_off_recovery_account
 	loan_product_doc.interest_receivable_account = interest_receivable_account
 	loan_product_doc.penalty_receivable_account = penalty_receivable_account
-	loan_product_doc.charges_receivable_account = charges_receivable_account
 	loan_product_doc.suspense_interest_income = suspense_interest_income
 	loan_product_doc.interest_waiver_account = interest_waiver_account
 	loan_product_doc.interest_accrued_account = interest_accrued_account
@@ -447,6 +453,19 @@ def add_or_update_loan_charges(product_name):
 		},
 	)
 	loan_product.save()
+
+
+def create_charge_master(charge_type):
+	if not frappe.db.exists("Item", charge_type):
+		frappe.get_doc(
+			{
+				"doctype": "Item",
+				"item_code": charge_type,
+				"item_group": "Services",
+				"is_stock_item": 0,
+				"income_account": "Charge Income Account - _TC",
+			}
+		).insert()
 
 
 def create_loan_security_type():
@@ -532,7 +551,7 @@ def create_loan_security_price(loan_security, loan_security_price, uom, from_dat
 		"name",
 	):
 
-		lsp = frappe.get_doc(
+		frappe.get_doc(
 			{
 				"doctype": "Loan Security Price",
 				"loan_security": loan_security,
@@ -762,13 +781,15 @@ def create_loan_partner(
 	return partner
 
 
-def set_loan_settings_in_company(company=None):
-	if not company:
-		company = "_Test Company"
-	company = frappe.get_doc("Company", company)
+def set_loan_settings_in_company(company_name=None):
+	if not company_name:
+		company_name = "_Test Company"
+
+	company = frappe.get_doc("Company", company_name)
 	company.min_days_bw_disbursement_first_repayment = 15
 	company.save()
 
+	frappe.db.set_value("Company", company_name, "enable_loan_accounting", 1)
 
 def setup_loan_demand_offset_order(company=None):
 	if not company:
@@ -942,6 +963,8 @@ def init_loan_products():
 		collection_offset_sequence_for_written_off_asset=None,
 		collection_offset_sequence_for_settlement_collection=None,
 	)
+
+	create_charge_master("Documentation Charge")
 
 
 def init_customers():

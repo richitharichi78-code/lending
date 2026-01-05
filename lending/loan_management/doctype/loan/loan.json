@@ -101,7 +101,7 @@
    "fieldname": "applicant_type",
    "fieldtype": "Select",
    "label": "Applicant Type",
-   "options": "Employee\nMember\nCustomer",
+   "options": "Customer\nEmployee",
    "reqd": 1,
    "search_index": 1
   },
@@ -243,8 +243,7 @@
    "fieldtype": "Link",
    "label": "Payment Account",
    "options": "Account",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "column_break_9",
@@ -256,8 +255,7 @@
    "fieldtype": "Link",
    "label": "Loan Account",
    "options": "Account",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fetch_from": "loan_product.interest_income_account",
@@ -265,8 +263,7 @@
    "fieldtype": "Link",
    "label": "Interest Income Account",
    "options": "Account",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "section_break_17",
@@ -334,8 +331,7 @@
    "fieldtype": "Link",
    "label": "Penalty Income Account",
    "options": "Account",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "fieldname": "total_principal_paid",
@@ -382,8 +378,7 @@
    "fieldtype": "Link",
    "label": "Disbursement Account",
    "options": "Account",
-   "read_only": 1,
-   "reqd": 1
+   "read_only": 1
   },
   {
    "collapsible": 1,
@@ -726,7 +721,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-18 11:16:12.017321",
+ "modified": "2025-12-18 10:42:35.606076",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",
