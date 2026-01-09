@@ -13,6 +13,31 @@ frappe.query_reports["Loan Repayment and Closure"] = {
 			"default": frappe.defaults.get_user_default("Company")
 		},
 		{
+			"fieldname":"loan_product",
+			"label": __("Loan Product"),
+			"fieldtype": "Link",
+		},
+		{
+			"fieldname":"from_date",
+			"label": __("From Date"),
+			"fieldtype": "Date",
+			"reqd": 1,
+			"default": frappe.datetime.add_months(frappe.datetime.get_today(), -1)
+		},
+		{
+			"fieldname":"to_date",
+			"label": __("To Date"),
+			"fieldtype": "Date",
+			"reqd": 1,
+			"default": frappe.datetime.get_today()
+		},
+		{
+			"fieldname":"loan",
+			"label": __("Loan"),
+			"fieldtype": "Link",
+			"options": "Loan",
+		},
+		{
 			"fieldname":"applicant_type",
 			"label": __("Applicant Type"),
 			"fieldtype": "Select",
