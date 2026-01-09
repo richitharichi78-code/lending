@@ -15,6 +15,7 @@ def execute(filters=None):
 def get_columns():
 	return [
 		{"label": _("Posting Date"), "fieldtype": "Date", "fieldname": "posting_date", "width": 100},
+		{"label": _("Value Date"), "fieldtype": "Date", "fieldname": "value_date", "width": 100},
 		{
 			"label": _("Loan Repayment"),
 			"fieldtype": "Link",
@@ -30,39 +31,39 @@ def get_columns():
 			"width": 200,
 		},
 		{"label": _("Applicant"), "fieldtype": "Data", "fieldname": "applicant", "width": 150},
-		{"label": _("Payment Type"), "fieldtype": "Data", "fieldname": "payment_type", "width": 150},
+		{"label": _("Payment Type"), "fieldtype": "Data", "fieldname": "repayment_type", "width": 150},
 		{
-			"label": _("Principal Amount"),
+			"label": _("Overdue Amount"),
 			"fieldtype": "Currency",
-			"fieldname": "principal_amount",
+			"fieldname": "overdue_amount",
 			"options": "currency",
 			"width": 100,
 		},
 		{
-			"label": _("Interest Amount"),
+			"label": _("Total Principal Paid"),
 			"fieldtype": "Currency",
-			"fieldname": "interest",
+			"fieldname": "principal_amount_paid",
 			"options": "currency",
 			"width": 100,
 		},
 		{
-			"label": _("Penalty Amount"),
+			"label": _("Total Interest Paid"),
 			"fieldtype": "Currency",
-			"fieldname": "penalty",
+			"fieldname": "total_interest_paid",
 			"options": "currency",
 			"width": 100,
 		},
 		{
-			"label": _("Payable Amount"),
+			"label": _("Total Penalty Paid"),
 			"fieldtype": "Currency",
-			"fieldname": "payable_amount",
+			"fieldname": "total_penalty_paid",
 			"options": "currency",
 			"width": 100,
 		},
 		{
-			"label": _("Paid Amount"),
+			"label": _("Total Payment"),
 			"fieldtype": "Currency",
-			"fieldname": "paid_amount",
+			"fieldname": "amount_paid",
 			"options": "currency",
 			"width": 100,
 		},
@@ -72,9 +73,9 @@ def get_columns():
 			"fieldname": "currency",
 			"options": "Currency",
 			"width": 100,
+			"hidden": 1,
 		},
 	]
-
 
 def get_data(filters):
 	data = []
@@ -87,19 +88,27 @@ def get_data(filters):
 	if filters.get("applicant"):
 		query_filters.update({"applicant": filters.get("applicant")})
 
+	if filters.get("loan"):
+		query_filters.update({"against_loan": filters.get("loan")})
+
+	if filters.get("loan_product"):
+		query_filters.update({"loan_product": filters.get("loan_product")})
+
 	loan_repayments = frappe.get_all(
 		"Loan Repayment",
 		filters=query_filters,
 		fields=[
 			"posting_date",
+			"value_date",
+			"repayment_type",
 			"applicant",
 			"name",
 			"against_loan",
 			"payable_amount",
-			"pending_principal_amount",
-			"interest_payable",
-			"penalty_amount",
-			"amount_paid",
+			"principal_amount_paid",
+			"total_interest_paid",
+			"total_penalty_paid",
+			"amount_paid"
 		],
 	)
 
@@ -108,15 +117,16 @@ def get_data(filters):
 	for repayment in loan_repayments:
 		row = {
 			"posting_date": repayment.posting_date,
+			"value_date": repayment.value_date,
+			"against_loan": repayment.against_loan,
 			"loan_repayment": repayment.name,
 			"applicant": repayment.applicant,
-			"payment_type": repayment.payment_type,
-			"against_loan": repayment.against_loan,
-			"principal_amount": repayment.pending_principal_amount,
-			"interest": repayment.interest_payable,
-			"penalty": repayment.penalty_amount,
-			"payable_amount": repayment.payable_amount,
-			"paid_amount": repayment.amount_paid,
+			"repayment_type": repayment.repayment_type,
+			"overdue_amount": repayment.payable_amount,
+			"principal_amount_paid": repayment.principal_amount_paid,
+			"total_interest_paid": repayment.total_interest_paid,
+			"total_penalty_paid": repayment.total_penalty_paid,
+			"amount_paid": repayment.amount_paid,
 			"currency": default_currency,
 		}
 
