@@ -88,9 +88,7 @@ class LoanDisbursement(LoanController):
 		reference_date: DF.Date | None
 		reference_number: DF.Data | None
 		refund_account: DF.Link | None
-		repayment_frequency: DF.Literal[
-			"Monthly", "Daily", "Weekly", "Bi-Weekly", "Quarterly", "One Time"
-		]
+		repayment_frequency: DF.Literal["Monthly", "Daily", "Weekly", "Bi-Weekly", "Quarterly", "One Time"]
 		repayment_method: DF.Literal["", "Repay Over Number of Periods", "Repay Fixed Amount per Period"]
 		repayment_schedule_type: DF.Data | None
 		repayment_start_date: DF.Date | None
@@ -101,17 +99,19 @@ class LoanDisbursement(LoanController):
 	# end: auto-generated types
 
 	def autoname(self):
-		if self.get("is_imported") and self.get("loan_disbursement_id"):
+		if self.is_imported and self.loan_disbursement_id:
 			self.name = self.loan_disbursement_id
+			return
 
 	def validate(self):
-		self.set_status()
-		self.set_missing_values()
-		self.validate_disbursal_amount()
-		if self.repayment_schedule_type == "Line of Credit":
-			self.set_cyclic_date()
+		if not self.is_imported:
+			self.set_status()
+			self.set_missing_values()
+			self.validate_disbursal_amount()
+			if self.repayment_schedule_type == "Line of Credit":
+				self.set_cyclic_date()
 
-		self.validate_repayment_start_date()
+			self.validate_repayment_start_date()
 
 	def on_update(self):
 		if self.is_term_loan:

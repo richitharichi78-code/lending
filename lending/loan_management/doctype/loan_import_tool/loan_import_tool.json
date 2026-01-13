@@ -1,23 +1,28 @@
 {
  "actions": [],
  "allow_copy": 1,
- "allow_rename": 1,
+ "autoname": "format:{import_for} Import on {creation}",
  "creation": "2025-10-03 11:37:48.517646",
  "doctype": "DocType",
  "engine": "InnoDB",
  "field_order": [
+  "import_for",
+  "loan_import_type",
+  "import_file",
+  "column_break_xcci",
   "company",
   "create_missing_customers",
-  "column_break_vwno",
-  "import_for",
-  "import_type",
-  "import_file"
+  "status",
+  "import_log_section",
+  "data_import",
+  "import_log_preview"
  ],
  "fields": [
   {
    "fieldname": "company",
    "fieldtype": "Link",
    "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Company",
    "options": "Company",
    "reqd": 1
@@ -28,55 +33,105 @@
    "label": "Import File"
   },
   {
-   "depends_on": "eval:doc.import_for==\"Loan\";",
-   "fieldname": "import_type",
-   "fieldtype": "Select",
-   "label": "Import Type",
-   "options": "Mid Tenure Loans\nClosed Loans",
-   "reqd": 1
-  },
-  {
    "default": "0",
    "fieldname": "create_missing_customers",
    "fieldtype": "Check",
    "label": "Create Missing Customers"
   },
   {
-   "fieldname": "column_break_vwno",
-   "fieldtype": "Column Break"
-  },
-  {
    "fieldname": "import_for",
    "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
    "label": "Import For",
    "options": "Loan\nLoan Repayment",
    "reqd": 1
+  },
+  {
+   "fieldname": "column_break_xcci",
+   "fieldtype": "Column Break"
+  },
+  {
+   "fieldname": "import_log_section",
+   "fieldtype": "Section Break",
+   "label": "Import Log"
+  },
+  {
+   "fieldname": "data_import",
+   "fieldtype": "Link",
+   "hidden": 1,
+   "label": "Data Import",
+   "no_copy": 1,
+   "options": "Data Import",
+   "read_only": 1
+  },
+  {
+   "fieldname": "import_log_preview",
+   "fieldtype": "HTML",
+   "label": "Import Log Preview"
+  },
+  {
+   "depends_on": "eval:doc.import_for==\"Loan\";",
+   "fieldname": "loan_import_type",
+   "fieldtype": "Select",
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Loan Import Type",
+   "options": "Mid Tenure Loans\nClosed Loans",
+   "reqd": 1
+  },
+  {
+   "fieldname": "status",
+   "fieldtype": "Select",
+   "hidden": 1,
+   "in_list_view": 1,
+   "in_standard_filter": 1,
+   "label": "Status",
+   "options": "Pending\nSuccess\nPartial Success\nError\nTimed Out"
   }
  ],
  "grid_page_length": 50,
  "hide_toolbar": 1,
  "index_web_pages_for_search": 1,
- "issingle": 1,
  "links": [],
- "modified": "2025-11-21 16:48:13.886478",
+ "modified": "2026-01-13 19:13:13.150387",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Import Tool",
+ "naming_rule": "Expression (old style)",
  "owner": "Administrator",
  "permissions": [
   {
    "create": 1,
    "delete": 1,
-   "email": 1,
-   "print": 1,
    "read": 1,
    "role": "System Manager",
-   "share": 1,
    "write": 1
   }
  ],
  "row_format": "Dynamic",
  "sort_field": "creation",
  "sort_order": "DESC",
- "states": []
+ "states": [
+  {
+   "color": "Green",
+   "title": "Success"
+  },
+  {
+   "color": "Orange",
+   "title": "Partial Success"
+  },
+  {
+   "color": "Yellow",
+   "title": "Pending"
+  },
+  {
+   "color": "Red",
+   "title": "Error"
+  },
+  {
+   "color": "Red",
+   "title": "Timed Out"
+  }
+ ]
 }

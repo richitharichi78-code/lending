@@ -287,6 +287,7 @@
   },
   {
    "default": "0",
+   "fetch_from": "loan.is_imported",
    "fieldname": "is_imported",
    "fieldtype": "Check",
    "label": "Is Imported",
@@ -297,11 +298,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-17 10:48:35.278233",
+ "modified": "2026-01-13 12:33:41.911311",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Interest Accrual",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

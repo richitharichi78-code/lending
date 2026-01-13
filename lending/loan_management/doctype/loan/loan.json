@@ -19,6 +19,7 @@
   "status",
   "loan_id",
   "is_imported",
+  "migration_date",
   "section_break_8",
   "loan_product",
   "loan_amount",
@@ -727,12 +728,19 @@
   {
    "fieldname": "column_break_nzzj",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "is_imported",
+   "fieldname": "migration_date",
+   "fieldtype": "Date",
+   "label": "Migration Date",
+   "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-01 16:04:23.630804",
+ "modified": "2026-01-13 14:36:05.392047",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

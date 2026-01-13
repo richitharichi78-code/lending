@@ -24,8 +24,9 @@ from frappe.utils.caching import redis_cache
 
 import erpnext
 from erpnext.accounts.doctype.journal_entry.journal_entry import get_payment_entry
-from erpnext.controllers.accounts_controller import AccountsController
+from erpnext.accounts.general_ledger import process_gl_map
 
+from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log import (
 	create_loan_limit_change_log,
 )
@@ -37,7 +38,7 @@ from lending.utils import daterange
 
 
 # nosemgrep
-class Loan(AccountsController):
+class Loan(LoanController):
 	# begin: auto-generated types
 	# This code is auto-generated. Do not modify anything in this block.
 
@@ -132,10 +133,14 @@ class Loan(AccountsController):
 	# end: auto-generated types
 
 	def autoname(self):
-		if self.get("is_imported") and self.get("loan_id"):
+		if frappe.flags.in_import and self.loan_id:
 			self.name = self.loan_id
+			return
 
 	def validate(self):
+		if frappe.flags.in_import:
+			self.is_imported = 1
+
 		self.set_status()
 		self.set_loan_amount()
 		self.validate_loan_amount()
@@ -248,6 +253,9 @@ class Loan(AccountsController):
 		# Interest accrual for backdated term loans
 		self.create_loan_limit_change_log("Loan Booking", self.posting_date)
 
+		if self.is_imported:
+			self.make_gl_entries()
+
 	def on_cancel(self):
 		self.cancel_and_delete_repayment_schedule()
 		self.cancel_loan_security_assignment()
@@ -267,6 +275,9 @@ class Loan(AccountsController):
 			"Process Loan Demand",
 		]
 		self.set_status()
+
+		if self.is_imported:
+			self.make_gl_entries(cancel=1)
 
 	# nosemgrep
 	def set_status(self):
@@ -469,6 +480,130 @@ class Loan(AccountsController):
 			):
 				doc = frappe.get_doc("Loan Security Assignment", assignment.name)
 				doc.cancel()
+
+	def make_gl_entries(self, cancel=0, adv_adj=0):
+		if not loan_accounting_enabled(self.company):
+			return
+
+		loan_account, payment_account = self.get_opening_accounts_from_loan_product()
+
+		outstanding = self.get_outstanding_principal_amount()
+		if outstanding <= 0:
+			return
+
+		posting_date = self.get_opening_posting_date()
+
+		gle_map = []
+		remarks = _("Opening entry for imported loan {0}").format(self.name)
+
+		self.add_opening_gl_entry(
+			gle_map=gle_map,
+			account=payment_account,
+			against_account=loan_account,
+			amount=outstanding,
+			remarks=remarks,
+			posting_date=posting_date,
+		)
+
+		if gle_map:
+			if cancel:
+				gle_map = process_gl_map(gle_map)
+
+			super().make_gl_entries(gle_map, cancel=cancel, adv_adj=adv_adj)
+
+	def get_outstanding_principal_amount(self) -> float:
+		loan_amount = flt(self.get("loan_amount")) or flt(self.get("disbursed_amount"))
+		total_principal_paid = flt(self.get("total_principal_paid"))
+
+		precision = cint(frappe.db.get_default("currency_precision")) or 2
+		return flt(loan_amount - total_principal_paid, precision)
+
+	def get_opening_posting_date(self):
+		if self.get("migration_date"):
+			return self.get("migration_date")
+
+		return self.get("posting_date") or getdate()
+
+	def get_opening_accounts_from_loan_product(self):
+		if not self.loan_product:
+			frappe.throw(_("Loan Product is mandatory to create opening GL entries."))
+
+		acc = frappe.db.get_value(
+			"Loan Product",
+			self.loan_product,
+			["loan_account", "payment_account"],
+			as_dict=True,
+		) or {}
+
+		loan_account = acc.get("loan_account")
+		payment_account = acc.get("payment_account")
+
+		if not loan_account:
+			frappe.throw(
+				_("Please set Loan Account for the Loan Product {0}").format(frappe.bold(self.loan_product))
+			)
+
+		if not payment_account:
+			frappe.throw(
+				_("Please set Payment Account for the Loan Product {0}").format(frappe.bold(self.loan_product))
+			)
+
+		return loan_account, payment_account
+
+	def add_opening_gl_entry(
+		self,
+		gle_map,
+		account,
+		against_account,
+		amount,
+		remarks,
+		posting_date,
+	):
+		account_type = frappe.db.get_value("Account", account, "account_type")
+
+		gle_map.append(
+			self.get_gl_dict(
+				{
+					"account": account,
+					"against": against_account,
+					"debit": amount,
+					"debit_in_account_currency": amount,
+					"credit": 0,
+					"credit_in_account_currency": 0,
+					"voucher_type": "Loan",
+					"voucher_no": self.name,
+					"remarks": remarks,
+					"cost_center": self.get("cost_center"),
+					"party_type": self.applicant_type if account_type in ("Receivable", "Payable") else None,
+					"party": self.applicant if account_type in ("Receivable", "Payable") else None,
+					"posting_date": posting_date,
+					"is_opening": "Yes",
+				}
+			)
+		)
+
+		account_type = frappe.db.get_value("Account", against_account, "account_type")
+
+		gle_map.append(
+			self.get_gl_dict(
+				{
+					"account": against_account,
+					"against": account,
+					"debit": -1 * amount,  # negative debit becomes credit
+					"debit_in_account_currency": -1 * amount,
+					"credit": 0,
+					"credit_in_account_currency": 0,
+					"voucher_type": "Loan",
+					"voucher_no": self.name,
+					"remarks": remarks,
+					"cost_center": self.get("cost_center"),
+					"party_type": self.applicant_type if account_type in ("Receivable", "Payable") else None,
+					"party": self.applicant if account_type in ("Receivable", "Payable") else None,
+					"posting_date": posting_date,
+					"is_opening": "Yes",
+				}
+			)
+		)
 
 
 def update_total_amount_paid(doc):

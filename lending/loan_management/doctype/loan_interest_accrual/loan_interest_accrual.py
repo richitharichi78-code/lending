@@ -36,9 +36,7 @@ class LoanInterestAccrual(LoanController):
 		from frappe.types import DF
 
 		accrual_date: DF.Date | None
-		accrual_type: DF.Literal[
-			"Regular", "Repayment", "Disbursement", "Credit Adjustment", "Debit Adjustment", "Refund"
-		]
+		accrual_type: DF.Literal["Regular", "Repayment", "Disbursement", "Credit Adjustment", "Debit Adjustment", "Refund"]
 		additional_interest_amount: DF.Currency
 		additional_interest_suspense_entry: DF.Link | None
 		amended_from: DF.Link | None

@@ -93,27 +93,7 @@ class LoanRepayment(LoanController):
 		reference_number: DF.Data | None
 		repayment_details: DF.Table[LoanRepaymentDetail]
 		repayment_schedule_type: DF.Data | None
-		repayment_type: DF.Literal[
-			"Normal Repayment",
-			"Interest Waiver",
-			"Penalty Waiver",
-			"Charges Waiver",
-			"Principal Adjustment",
-			"Interest Carry Forward",
-			"Write Off Recovery",
-			"Security Deposit Adjustment",
-			"Advance Payment",
-			"Pre Payment",
-			"Subsidy Adjustments",
-			"Loan Closure",
-			"Partial Settlement",
-			"Full Settlement",
-			"Write Off Settlement",
-			"Charge Payment",
-			"Penalty Capitalization",
-			"Interest Capitalization",
-			"Charges Capitalization",
-		]
+		repayment_type: DF.Literal["Normal Repayment", "Interest Waiver", "Penalty Waiver", "Charges Waiver", "Principal Adjustment", "Interest Carry Forward", "Write Off Recovery", "Security Deposit Adjustment", "Advance Payment", "Pre Payment", "Subsidy Adjustments", "Loan Closure", "Partial Settlement", "Full Settlement", "Write Off Settlement", "Charge Payment", "Penalty Capitalization", "Interest Capitalization", "Charges Capitalization"]
 		shortfall_amount: DF.Currency
 		total_charges_paid: DF.Currency
 		total_charges_payable: DF.Currency
@@ -126,10 +106,18 @@ class LoanRepayment(LoanController):
 		value_date: DF.Datetime
 	# end: auto-generated types
 
+	def autoname(self):
+		if frappe.flags.in_import and self.loan_repayment_id:
+			self.name = self.loan_repayment_id
+			return
+
 	def before_validate(self):
 		self.set_repayment_account()
 
 	def validate(self):
+		if frappe.flags.in_import and self.loan_repayment_id:
+			return
+
 		charges = None
 		if self.get("payable_charges"):
 			if self.repayment_type == "Charge Payment":
@@ -165,6 +153,9 @@ class LoanRepayment(LoanController):
 		self.allocate_amount_against_demands(amounts)
 
 	def on_update(self):
+		if frappe.flags.in_import and self.loan_repayment_id:
+			return
+
 		from lending.loan_management.doctype.loan_restructure.loan_restructure import (
 			create_update_loan_reschedule,
 		)
@@ -185,6 +176,9 @@ class LoanRepayment(LoanController):
 				)
 
 	def on_submit(self):
+		if frappe.flags.in_import and self.loan_repayment_id:
+			return
+
 		from lending.loan_management.doctype.loan_demand.loan_demand import reverse_demands
 		from lending.loan_management.doctype.loan_disbursement.loan_disbursement import (
 			make_sales_invoice_for_charge,

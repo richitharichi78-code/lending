@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "autoname": "LM-REP-.####",
  "creation": "2022-01-25 10:30:02.767941",
  "doctype": "DocType",
@@ -555,6 +556,7 @@
   },
   {
    "default": "0",
+   "fetch_from": "against_loan.is_imported",
    "fieldname": "is_imported",
    "fieldtype": "Check",
    "label": "Is Imported",
@@ -571,7 +573,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-12-30 14:56:33.043943",
+ "modified": "2026-01-12 17:01:46.766889",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Repayment",
