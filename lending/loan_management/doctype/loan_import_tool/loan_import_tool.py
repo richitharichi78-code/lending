@@ -139,11 +139,11 @@ class LoanImportTool(Document):
 		self.check_permission("write")
 
 		if not self.import_file:
-			frappe.throw("Please attach import file")
+			frappe.throw(_("Please attach import file"))
 
 		run_now = frappe.in_test or frappe.conf.developer_mode
 		if is_scheduler_inactive() and not run_now:
-			frappe.throw("Scheduler is inactive. Cannot import data.")
+			frappe.throw(_("Scheduler is inactive. Cannot import data."))
 
 		target_doctype = self.get_target_doctype()
 		parsed_file = ImportFile(target_doctype, self.import_file, import_type="Insert New Records")
