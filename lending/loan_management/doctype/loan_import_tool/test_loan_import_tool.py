@@ -54,8 +54,6 @@ class TestLoanImportTool(IntegrationTestCase):
 		tool_doc.db_set("data_import", di.name, update_modified=False)
 		tool_doc.db_set("status", "Pending", update_modified=False)
 
-		frappe.db.commit()
-
 		tool_doc.run_import_now(di.name)
 		return di.name
 
