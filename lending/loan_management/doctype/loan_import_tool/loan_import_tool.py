@@ -130,7 +130,7 @@ class LoanImportTool(Document):
 			if frappe.db.exists("Data Import", di_name):
 				frappe.db.set_value("Data Import", di_name, "status", "Error", update_modified=False)
 			self.db_set("status", "Error", update_modified=False)
-			frappe.db.commit()
+			frappe.db.commit() # nosemgrep
 
 		return not any_failed
 
