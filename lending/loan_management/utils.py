@@ -1,6 +1,7 @@
 from pypika import CustomFunction
 
 import frappe
+from frappe import _
 from frappe.query_builder.custom import ConstantColumn
 from frappe.query_builder.functions import Sum
 from frappe.utils import flt, getdate
@@ -346,7 +347,7 @@ def validate_import_mandatory_fields(doc, depends_on_value="is_imported"):
 			missing_labels.append(df.label if df else fieldname)
 
 	if missing_labels:
-		frappe.throw(
+		frappe.throw(_(
 			"Import time these fields are required: " + ", ".join(missing_labels)
-		)
+		))
 
