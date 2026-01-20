@@ -250,8 +250,6 @@ frappe.ui.form.on("Loan Import Tool", {
 
 	show_import_log(frm) {
 		frm.toggle_display("import_log_section", false);
-
-		if (frm.is_new() || frm.import_in_progress) return;
 		if (!frm.doc.data_import) return;
 
 		frappe.call({

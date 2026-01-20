@@ -33,7 +33,7 @@ from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
-from lending.loan_management.utils import loan_accounting_enabled, validate_import_mandatory_fields
+from lending.loan_management.utils import loan_accounting_enabled
 from lending.utils import daterange
 
 
@@ -129,8 +129,6 @@ class Loan(LoanController):
 	def validate(self):
 		if frappe.flags.in_import:
 			self.is_imported = 1
-			if self.get("is_imported"):
-				validate_import_mandatory_fields(self)
 
 		self.set_status()
 		self.set_loan_amount()

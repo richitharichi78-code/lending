@@ -12,8 +12,6 @@ from frappe.core.doctype.data_import.exporter import Exporter
 from frappe.core.doctype.data_import.importer import Importer, ImportFile
 from frappe.model.document import Document
 from frappe.utils import flt, getdate
-from frappe.utils.background_jobs import is_job_enqueued
-from frappe.utils.scheduler import is_scheduler_inactive
 
 
 class LoanImportTool(Document):
@@ -40,6 +38,7 @@ class LoanImportTool(Document):
 
 		if not self.import_file:
 			self.data_import = None
+			self.status = "Pending"
 
 	def get_static_mandatory_labels(self):
 		if self.import_for == "Loan" and self.loan_import_type == "Mid Tenure Loans":
@@ -83,8 +82,6 @@ class LoanImportTool(Document):
 		if not self.import_file:
 			frappe.throw(_("Please attach import file"))
 
-		run_now = frappe.in_test or frappe.conf.developer_mode
-
 		target_doctype = self.get_target_doctype()
 		parsed_file = ImportFile(target_doctype, self.import_file, import_type="Insert New Records")
 		payload_count = len(parsed_file.get_payloads_for_import())
@@ -99,26 +96,7 @@ class LoanImportTool(Document):
 		self.db_set("data_import", di.name, update_modified=False)
 		self.db_set("status", "Pending", update_modified=False)
 
-		if payload_count > 100 and not run_now:
-			if is_scheduler_inactive():
-				frappe.throw(_("Scheduler is inactive. Cannot import data."))
-
-			job_id = f"loan_import_tool||{self.doctype}||{self.name}"
-			if not is_job_enqueued(job_id):
-				frappe.enqueue(
-					run_loan_import_tool_job,
-					queue="long",
-					timeout=10000,
-					job_id=job_id,
-					event="data_import",
-					tool_doctype=self.doctype,
-					tool_name=self.name,
-					data_import_name=di.name,
-					now=run_now,
-					enqueue_after_commit=True,
-				)
-
-			return {"data_import": di.name, "queued": 1}
+		frappe.db.commit()  # nosemgrep
 
 		self.run_import_now(di.name)
 		return {"data_import": di.name, "queued": 0}
@@ -178,7 +156,7 @@ class LoanImportTool(Document):
 			)
 
 		self.db_set("status", final_status, update_modified=False)
-		frappe.db.commit() # nosemgrep
+		frappe.db.commit()  # nosemgrep
 
 	def import_loan_repayments(self, data_import_name: str):
 		di = frappe.get_doc("Data Import", data_import_name)
@@ -806,33 +784,6 @@ class LoanImportTool(Document):
 		created = frappe.db.get_value(doctype, docname, "creation")
 		di_created = frappe.db.get_value("Data Import", data_import_name, "creation")
 		return bool(created and di_created and created < di_created)
-
-
-def run_loan_import_tool_job(tool_doctype: str, tool_name: str, data_import_name: str):
-	tool = frappe.get_doc(tool_doctype, tool_name)
-
-	try:
-		tool.db_set("status", "Pending", update_modified=False)
-		tool.run_import_now(data_import_name)
-
-	except Exception as e:
-		frappe.db.rollback()
-
-		status = "Error"
-		if "timeout" in str(e).lower():
-			status = "Timed Out"
-
-		if frappe.db.exists("Data Import", data_import_name):
-			frappe.db.set_value("Data Import", data_import_name, "status", "Error", update_modified=False)
-
-		if frappe.db.exists(tool_doctype, tool_name):
-			frappe.db.set_value(tool_doctype, tool_name, "status", status, update_modified=False)
-
-		frappe.log_error(title="Loan Import Tool failed", message=str(e))
-
-	finally:
-		frappe.flags.in_import = False
-		frappe.publish_realtime("data_import_refresh", {"data_import": data_import_name}, user=frappe.session.user)
 
 
 def update_demand_generated_for_repayment_schedule(loan_name, disbursement_name, migration_date):

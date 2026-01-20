@@ -24,7 +24,7 @@ from lending.loan_management.doctype.loan_security_assignment.loan_security_assi
 from lending.loan_management.doctype.loan_security_shortfall.loan_security_shortfall import (
 	update_shortfall_status,
 )
-from lending.loan_management.utils import loan_accounting_enabled, validate_import_mandatory_fields
+from lending.loan_management.utils import loan_accounting_enabled
 
 
 class LoanRepayment(LoanController):
@@ -116,7 +116,7 @@ class LoanRepayment(LoanController):
 
 	def validate(self):
 		if self.get("is_imported"):
-			validate_import_mandatory_fields(self)
+			self.check_import_total_amount()
 
 		if frappe.flags.in_import and self.loan_repayment_id:
 			return
@@ -390,6 +390,20 @@ class LoanRepayment(LoanController):
 		repost.cancel_future_accruals_and_demands = True
 		repost.cancel_future_emi_demands = True
 		repost.submit()
+
+	def check_import_total_amount(self):
+		precision = cint(frappe.db.get_default("currency_precision")) or 2
+
+		total_amount = flt(self.principal_amount_paid, precision) + flt(self.total_interest_paid, precision) + flt(
+			self.total_penalty_paid, precision
+		) + flt(self.total_charges_paid, precision) + flt(self.unbooked_interest_paid, precision) + flt(
+			self.unbooked_penalty_paid, precision
+		)
+
+		if flt(self.amount_paid, precision) != flt(total_amount, precision):
+			frappe.throw(
+				_("Amount Paid must equal the sum of Principal, Interest, Penalty, Charges, Unbooked Interest, and Unbooked Penalty.")
+			)
 
 	def post_suspense_entries(self, cancel=0):
 		from lending.loan_management.doctype.loan_write_off.loan_write_off import (
