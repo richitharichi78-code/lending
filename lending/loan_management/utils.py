@@ -320,3 +320,33 @@ def get_amounts_not_reflected_in_system_for_bank_reconciliation_statement(filter
 
 def loan_accounting_enabled(company: str) -> bool:
 	return bool(frappe.get_cached_value("Company", company, "enable_loan_accounting"))
+
+
+def validate_import_mandatory_fields(doc, depends_on_value="is_imported"):
+	meta = frappe.get_meta(doc.doctype)
+
+	required_fields = [
+		df.fieldname
+		for df in meta.fields
+		if df.fieldname and getattr(df, "mandatory_depends_on", None) == depends_on_value
+	]
+
+	missing_labels = []
+
+	for fieldname in required_fields:
+		df = meta.get_field(fieldname)
+		val = doc.get(fieldname)
+
+		if df and df.fieldtype in ("Currency", "Float", "Int", "Percent"):
+			is_missing = (val is None) or (val == "")
+		else:
+			is_missing = (val is None) or (val == "") or (isinstance(val, str) and not val.strip())
+
+		if is_missing:
+			missing_labels.append(df.label if df else fieldname)
+
+	if missing_labels:
+		frappe.throw(
+			"Import time these fields are required: " + ", ".join(missing_labels)
+		)
+

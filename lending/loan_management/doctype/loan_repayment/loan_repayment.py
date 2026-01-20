@@ -24,7 +24,7 @@ from lending.loan_management.doctype.loan_security_assignment.loan_security_assi
 from lending.loan_management.doctype.loan_security_shortfall.loan_security_shortfall import (
 	update_shortfall_status,
 )
-from lending.loan_management.utils import loan_accounting_enabled
+from lending.loan_management.utils import loan_accounting_enabled, validate_import_mandatory_fields
 
 
 class LoanRepayment(LoanController):
@@ -115,6 +115,9 @@ class LoanRepayment(LoanController):
 		self.set_repayment_account()
 
 	def validate(self):
+		if self.get("is_imported"):
+			validate_import_mandatory_fields(self)
+
 		if frappe.flags.in_import and self.loan_repayment_id:
 			return
 

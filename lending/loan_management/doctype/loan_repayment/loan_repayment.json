@@ -238,6 +238,7 @@
    "fieldname": "principal_amount_paid",
    "fieldtype": "Currency",
    "label": "Principal Amount Paid",
+   "mandatory_depends_on": "is_imported",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -268,6 +269,7 @@
    "fieldname": "total_interest_paid",
    "fieldtype": "Currency",
    "label": "Total Interest Paid",
+   "mandatory_depends_on": "is_imported",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -290,6 +292,7 @@
    "fieldname": "total_penalty_paid",
    "fieldtype": "Currency",
    "label": "Total Penalty Paid",
+   "mandatory_depends_on": "is_imported",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -312,6 +315,7 @@
    "fieldname": "payment_account",
    "fieldtype": "Link",
    "label": "Repayment Account",
+   "mandatory_depends_on": "is_imported",
    "options": "Account"
   },
   {
@@ -323,6 +327,7 @@
    "fieldname": "loan_account",
    "fieldtype": "Link",
    "label": "Loan Account",
+   "mandatory_depends_on": "is_imported",
    "options": "Account",
    "read_only": 1
   },
@@ -393,6 +398,7 @@
    "fieldtype": "Link",
    "in_standard_filter": 1,
    "label": "Loan Disbursement",
+   "mandatory_depends_on": "is_imported",
    "options": "Loan Disbursement",
    "search_index": 1
   },
@@ -400,6 +406,7 @@
    "fieldname": "total_charges_paid",
    "fieldtype": "Currency",
    "label": "Total Charges Paid",
+   "mandatory_depends_on": "is_imported",
    "options": "Company:company:default_currency",
    "read_only": 1
   },
@@ -438,6 +445,7 @@
    "fieldname": "excess_amount",
    "fieldtype": "Currency",
    "label": "Excess Amount",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -466,6 +474,7 @@
    "fieldname": "unbooked_interest_paid",
    "fieldtype": "Currency",
    "label": "Unbooked Interest Paid",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -474,6 +483,7 @@
    "fieldname": "unbooked_penalty_paid",
    "fieldtype": "Currency",
    "label": "Unbooked Penalty Paid",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -573,7 +583,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-12 17:01:46.766889",
+ "modified": "2026-01-20 14:12:05.351330",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Repayment",

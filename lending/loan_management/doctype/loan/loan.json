@@ -168,6 +168,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Status",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "\nDraft\nSanctioned\nPartially Disbursed\nDisbursed\nActive\nLoan Closure Requested\nClosed\nWritten Off\nSettled",
    "read_only": 1,
@@ -199,13 +200,15 @@
    "fieldname": "disbursement_date",
    "fieldtype": "Date",
    "label": "Disbursement Date",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1
   },
   {
    "depends_on": "eval: doc.is_term_loan && doc.repayment_schedule_type != \"Line of Credit\"",
    "fieldname": "repayment_start_date",
    "fieldtype": "Date",
-   "label": "Repayment Start Date"
+   "label": "Repayment Start Date",
+   "mandatory_depends_on": "is_imported"
   },
   {
    "fieldname": "column_break_11",
@@ -216,13 +219,15 @@
    "fieldname": "repayment_method",
    "fieldtype": "Select",
    "label": "Repayment Method",
+   "mandatory_depends_on": "is_imported",
    "options": "\nRepay Fixed Amount per Period\nRepay Over Number of Periods"
   },
   {
    "depends_on": "eval: doc.is_term_loan && doc.repayment_schedule_type != \"Line of Credit\"",
    "fieldname": "repayment_periods",
    "fieldtype": "Int",
-   "label": "Tenure"
+   "label": "Tenure",
+   "mandatory_depends_on": "is_imported"
   },
   {
    "depends_on": "eval: doc.is_term_loan && doc.repayment_schedule_type != \"Line of Credit\"",
@@ -278,6 +283,7 @@
    "fieldname": "total_payment",
    "fieldtype": "Currency",
    "label": "Total Payable Amount",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -292,6 +298,7 @@
    "fieldname": "total_interest_payable",
    "fieldtype": "Currency",
    "label": "Total Interest Payable",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -340,6 +347,7 @@
    "fieldname": "total_principal_paid",
    "fieldtype": "Currency",
    "label": "Total Principal Paid",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -348,6 +356,7 @@
    "fieldname": "disbursed_amount",
    "fieldtype": "Currency",
    "label": "Disbursed Amount",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -365,6 +374,7 @@
    "fieldname": "written_off_amount",
    "fieldtype": "Currency",
    "label": "Written Off Amount",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "Company:company:default_currency",
    "read_only": 1
@@ -506,6 +516,7 @@
    "fieldname": "repayment_frequency",
    "fieldtype": "Select",
    "label": "Repayment Frequency",
+   "mandatory_depends_on": "is_imported",
    "options": "Monthly\nDaily\nWeekly\nBi-Weekly\nQuarterly\nOne Time"
   },
   {
@@ -664,7 +675,8 @@
    "fetch_if_empty": 1,
    "fieldname": "penalty_charges_rate",
    "fieldtype": "Percent",
-   "label": "Penalty Charges Rate"
+   "label": "Penalty Charges Rate",
+   "mandatory_depends_on": "is_imported"
   },
   {
    "fieldname": "settlement_date",
@@ -734,13 +746,14 @@
    "fieldname": "migration_date",
    "fieldtype": "Date",
    "label": "Migration Date",
+   "mandatory_depends_on": "is_imported",
    "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-13 14:36:05.392047",
+ "modified": "2026-01-20 13:55:28.370918",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

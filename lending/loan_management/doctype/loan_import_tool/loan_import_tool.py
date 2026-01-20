@@ -41,33 +41,6 @@ class LoanImportTool(Document):
 		if not self.import_file:
 			self.data_import = None
 
-	def get_mandatory_fieldnames(self):
-		if self.import_for == "Loan Repayment":
-			return ["loan_repayment_id", "against_loan", "loan_disbursement", "repayment_type", "posting_date", "value_date", "amount_paid",
-				"principal_amount_paid", "total_interest_paid", "total_penalty_paid", "total_charges_paid", "unbooked_interest_paid",
-				"unbooked_penalty_paid", "excess_amount", "payment_account", "loan_account", "bank_account", "reference_number",
-				"reference_date", "manual_remarks",
-			]
-
-		return [
-			"loan_id", "applicant_type", "applicant", "loan_product", "loan_amount", "posting_date", "migration_date", "company",
-			"repayment_method", "repayment_frequency", "repayment_periods", "rate_of_interest", "penalty_charges_rate", "disbursement_date",
-			"disbursed_amount", "repayment_start_date", "total_principal_paid", "total_interest_payable", "total_payment",
-			"written_off_amount", "status",
-		]
-
-	def get_numeric_fieldnames(self):
-		if self.import_for == "Loan Repayment":
-			return {
-				"amount_paid", "principal_amount_paid", "total_interest_paid", "total_penalty_paid", "total_charges_paid",
-				"unbooked_interest_paid", "unbooked_penalty_paid", "excess_amount",
-			}
-
-		return {
-			"loan_amount", "rate_of_interest", "penalty_charges_rate", "disbursed_amount", "total_principal_paid", "total_interest_payable",
-			"total_payment", "written_off_amount",
-		}
-
 	def get_static_mandatory_labels(self):
 		if self.import_for == "Loan" and self.loan_import_type == "Mid Tenure Loans":
 			return [
@@ -76,63 +49,32 @@ class LoanImportTool(Document):
 			]
 		return []
 
-	def prevalidate_and_make_logs(self, di_name: str, payloads, parsed_file) -> bool:
-		self.current_data_import_name = di_name
-
-		mandatory = self.get_mandatory_fieldnames()
-		numeric = self.get_numeric_fieldnames()
-
+	def prevalidate_extra_columns(self, di_name: str, parsed_file) -> bool:
 		static_labels = self.get_static_mandatory_labels()
-		static_numeric = set(static_labels)
-		static_numeric.discard("Loan Disbursement ID")
+		if not static_labels:
+			return True
 
+		self.current_data_import_name = di_name
 		row_extras = self.read_extra_columns(parsed_file)
+		failed = False
 
-		def is_missing(fieldname: str, v, is_num: bool):
-			if is_num:
-				if v in (None, ""):
-					return True
-				if isinstance(v, str) and v.strip() == "":
-					return True
-				return False
-			if v is None:
-				return True
-			if isinstance(v, str) and v.strip() == "":
-				return True
-			return False
+		for row_no, extras in row_extras.items():
+			missing = [lbl for lbl in static_labels if extras.get(lbl) in (None, "")]
+			if missing:
+				failed = True
+				self.mark_row_failed(
+					row_no,
+					"Missing mandatory fields: " + ", ".join(missing),
+					title="Mandatory",
+				)
 
-		any_failed = False
-
-		for payload in payloads:
-			doc = payload.doc or {}
-
-			missing = [f for f in mandatory if is_missing(f, doc.get(f), f in numeric)]
-			for r in getattr(payload, "rows", None) or []:
-				extras = row_extras.get(r.row_number) or {}
-
-				missing_static = []
-				for lbl in static_labels:
-					val = extras.get(lbl)
-					missing_static_flag = is_missing(lbl, val, lbl in static_numeric)
-					if missing_static_flag:
-						missing_static.append(lbl)
-
-				all_missing = missing + missing_static
-				if all_missing:
-					any_failed = True
-					self.mark_row_failed(
-						r.row_number,
-						"Missing mandatory fields: " + ", ".join(all_missing),
-						title="Mandatory",
-					)
-
-		if any_failed:
+		if failed:
 			if frappe.db.exists("Data Import", di_name):
 				frappe.db.set_value("Data Import", di_name, "status", "Error", update_modified=False)
 			self.db_set("status", "Error", update_modified=False)
-			frappe.db.commit() # nosemgrep
+			return False
 
-		return not any_failed
+		return True
 
 	@frappe.whitelist()
 	def start_import(self):
@@ -142,8 +84,6 @@ class LoanImportTool(Document):
 			frappe.throw(_("Please attach import file"))
 
 		run_now = frappe.in_test or frappe.conf.developer_mode
-		if is_scheduler_inactive() and not run_now:
-			frappe.throw(_("Scheduler is inactive. Cannot import data."))
 
 		target_doctype = self.get_target_doctype()
 		parsed_file = ImportFile(target_doctype, self.import_file, import_type="Insert New Records")
@@ -159,22 +99,29 @@ class LoanImportTool(Document):
 		self.db_set("data_import", di.name, update_modified=False)
 		self.db_set("status", "Pending", update_modified=False)
 
-		job_id = f"loan_import_tool||{self.doctype}||{self.name}"
-		if not is_job_enqueued(job_id):
-			frappe.enqueue(
-				run_loan_import_tool_job,
-				queue="long",
-				timeout=10000,
-				job_id=job_id,
-				event="data_import",
-				tool_doctype=self.doctype,
-				tool_name=self.name,
-				data_import_name=di.name,
-				now=run_now,
-				enqueue_after_commit=True,
-			)
+		if payload_count > 100 and not run_now:
+			if is_scheduler_inactive():
+				frappe.throw(_("Scheduler is inactive. Cannot import data."))
 
-		return {"data_import": di.name}
+			job_id = f"loan_import_tool||{self.doctype}||{self.name}"
+			if not is_job_enqueued(job_id):
+				frappe.enqueue(
+					run_loan_import_tool_job,
+					queue="long",
+					timeout=10000,
+					job_id=job_id,
+					event="data_import",
+					tool_doctype=self.doctype,
+					tool_name=self.name,
+					data_import_name=di.name,
+					now=run_now,
+					enqueue_after_commit=True,
+				)
+
+			return {"data_import": di.name, "queued": 1}
+
+		self.run_import_now(di.name)
+		return {"data_import": di.name, "queued": 0}
 
 	@frappe.whitelist()
 	def get_import_logs(self):
@@ -204,18 +151,34 @@ class LoanImportTool(Document):
 		frappe.throw(f"Unsupported Import For: {self.import_for}")
 
 	def set_final_status_from_logs(self, data_import_name: str):
-		total = frappe.db.count("Data Import Log", {"data_import": data_import_name}) or 0
-		success = frappe.db.count("Data Import Log", {"data_import": data_import_name, "success": 1}) or 0
-		fail = max(total - success, 0)
+		fail = frappe.db.count(
+			"Data Import Log",
+			{"data_import": data_import_name, "success": 0}
+		) or 0
 
-		if success == 0:
-			final_status = "Error"
-		elif fail > 0:
-			final_status = "Partial Success"
-		else:
+		success = frappe.db.count(
+			"Data Import Log",
+			{"data_import": data_import_name, "success": 1}
+		) or 0
+
+		if fail == 0:
 			final_status = "Success"
+		elif success == 0:
+			final_status = "Error"
+		else:
+			final_status = "Partial Success"
+
+		if frappe.db.exists("Data Import", data_import_name):
+			frappe.db.set_value(
+				"Data Import",
+				data_import_name,
+				"status",
+				final_status,
+				update_modified=False,
+			)
 
 		self.db_set("status", final_status, update_modified=False)
+		frappe.db.commit() # nosemgrep
 
 	def import_loan_repayments(self, data_import_name: str):
 		di = frappe.get_doc("Data Import", data_import_name)
@@ -230,7 +193,7 @@ class LoanImportTool(Document):
 		parsed_file = ImportFile("Loan", self.import_file, import_type="Insert New Records")
 		payloads = parsed_file.get_payloads_for_import()
 
-		if not self.prevalidate_and_make_logs(di.name, payloads, parsed_file):
+		if not self.prevalidate_extra_columns(di.name, parsed_file):
 			frappe.publish_realtime("data_import_refresh", {"data_import": di.name}, user=frappe.session.user)
 			return
 
@@ -366,7 +329,7 @@ class LoanImportTool(Document):
 			updates.update(
 				{
 					"limit_applicable_start": posting_date,
-					"maximum_limit_amount": self.to_flt(loan_amount),
+					"maximum_limit_amount": flt(loan_amount),
 				}
 			)
 
@@ -378,7 +341,7 @@ class LoanImportTool(Document):
 		loan = frappe.get_doc("Loan", loan_name)
 		for k, v in to_set.items():
 			loan.set(k, v)
-		loan.flags.ignore_mandatory = True
+
 		loan.save(ignore_permissions=True)
 
 	def create_related_docs_for_row(
@@ -422,7 +385,7 @@ class LoanImportTool(Document):
 			"disbursement_date": pick(row_values, "disbursement_date", "Disbursement Date")
 			or loan_vals.get("disbursement_date")
 			or loan_vals.get("posting_date"),
-			"disbursed_amount": self.to_flt(pick(row_values, "disbursed_amount", "Disbursed Amount")),
+			"disbursed_amount": flt(pick(row_values, "disbursed_amount", "Disbursed Amount")),
 			"repayment_method": pick(row_values, "repayment_method", "Repayment Method"),
 			"repayment_frequency": pick(row_values, "repayment_frequency", "Repayment Frequency"),
 			"repayment_periods": pick(row_values, "repayment_periods", "Repayment Periods"),
@@ -449,11 +412,11 @@ class LoanImportTool(Document):
 			self.mark_row_failed(row_no, "\n".join(reasons))
 			raise frappe.ValidationError("Duplicate Loan Disbursement")
 
-		principal_outstanding = self.to_flt(pick(row_extras, "Principal Outstanding Amount"))
-		interest_outstanding = self.to_flt(pick(row_extras, "Interest Outstanding Amount"))
-		penalty_outstanding = self.to_flt(pick(row_extras, "Penalty Outstanding Amount"))
-		additional_outstanding = self.to_flt(pick(row_extras, "Additional Outstanding Amount"))
-		charge_outstanding = self.to_flt(pick(row_extras, "Charge Outstanding Amount"))
+		principal_outstanding = flt(pick(row_extras, "Principal Outstanding Amount"))
+		interest_outstanding = flt(pick(row_extras, "Interest Outstanding Amount"))
+		penalty_outstanding = flt(pick(row_extras, "Penalty Outstanding Amount"))
+		additional_outstanding = flt(pick(row_extras, "Additional Outstanding Amount"))
+		charge_outstanding = flt(pick(row_extras, "Charge Outstanding Amount"))
 
 		disb_name = self.create_loan_disbursement(
 			loan_company=loan_vals.get("company"),
@@ -508,7 +471,7 @@ class LoanImportTool(Document):
 			"company": loan_company,
 			"against_loan": loan_name,
 			"disbursement_date": loan_row.get("disbursement_date"),
-			"disbursed_amount": self.to_flt(loan_row.get("disbursed_amount")),
+			"disbursed_amount": flt(loan_row.get("disbursed_amount")),
 			"posting_date": loan_row.get("posting_date") or loan_row.get("disbursement_date"),
 		}
 
@@ -843,13 +806,6 @@ class LoanImportTool(Document):
 		created = frappe.db.get_value(doctype, docname, "creation")
 		di_created = frappe.db.get_value("Data Import", data_import_name, "creation")
 		return bool(created and di_created and created < di_created)
-
-	def to_flt(self, v) -> float:
-		if v in ("", None):
-			return 0.0
-		if isinstance(v, str):
-			v = v.replace(",", "")
-		return flt(v)
 
 
 def run_loan_import_tool_job(tool_doctype: str, tool_name: str, data_import_name: str):

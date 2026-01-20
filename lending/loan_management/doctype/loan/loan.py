@@ -33,7 +33,7 @@ from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
-from lending.loan_management.utils import loan_accounting_enabled
+from lending.loan_management.utils import loan_accounting_enabled, validate_import_mandatory_fields
 from lending.utils import daterange
 
 
@@ -74,6 +74,7 @@ class Loan(LoanController):
 		freeze_account: DF.Check
 		freeze_date: DF.Date | None
 		interest_income_account: DF.Link | None
+		is_imported: DF.Check
 		is_npa: DF.Check
 		is_secured_loan: DF.Check
 		is_term_loan: DF.Check
@@ -91,6 +92,7 @@ class Loan(LoanController):
 		manual_npa: DF.Check
 		maximum_limit_amount: DF.Currency
 		maximum_loan_amount: DF.Currency
+		migration_date: DF.Date | None
 		monthly_repayment_amount: DF.Currency
 		moratorium_tenure: DF.Int
 		moratorium_type: DF.Literal["", "EMI", "Principal"]
@@ -100,26 +102,13 @@ class Loan(LoanController):
 		posting_date: DF.Date
 		rate_of_interest: DF.Percent
 		refund_amount: DF.Currency
-		repayment_frequency: DF.Literal[
-			"Monthly", "Daily", "Weekly", "Bi-Weekly", "Quarterly", "One Time"
-		]
+		repayment_frequency: DF.Literal["Monthly", "Daily", "Weekly", "Bi-Weekly", "Quarterly", "One Time"]
 		repayment_method: DF.Literal["", "Repay Fixed Amount per Period", "Repay Over Number of Periods"]
 		repayment_periods: DF.Int
 		repayment_schedule_type: DF.Data | None
 		repayment_start_date: DF.Date | None
 		settlement_date: DF.Date | None
-		status: DF.Literal[
-			"",
-			"Draft",
-			"Sanctioned",
-			"Partially Disbursed",
-			"Disbursed",
-			"Active",
-			"Loan Closure Requested",
-			"Closed",
-			"Written Off",
-			"Settled",
-		]
+		status: DF.Literal["", "Draft", "Sanctioned", "Partially Disbursed", "Disbursed", "Active", "Loan Closure Requested", "Closed", "Written Off", "Settled"]
 		tenure_post_restructure: DF.Int
 		total_amount_paid: DF.Currency
 		total_interest_payable: DF.Currency
@@ -140,6 +129,8 @@ class Loan(LoanController):
 	def validate(self):
 		if frappe.flags.in_import:
 			self.is_imported = 1
+			if self.get("is_imported"):
+				validate_import_mandatory_fields(self)
 
 		self.set_status()
 		self.set_loan_amount()
