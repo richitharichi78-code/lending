@@ -5,7 +5,6 @@ import os
 import tempfile
 
 import frappe
-from frappe.core.doctype.data_import.importer import Importer, ImportFile
 from frappe.query_builder import DocType
 from frappe.query_builder import functions as fn
 from frappe.tests import IntegrationTestCase
@@ -3579,23 +3578,14 @@ class TestLoan(IntegrationTestCase):
 		return file_doc.file_url
 
 	def run_data_import(self, reference_doctype, file_url, submit_after_import=1):
-		parsed = ImportFile(reference_doctype, file_url, import_type="Insert New Records")
-		payload_count = len(parsed.get_payloads_for_import())
-
-		di = frappe.get_doc(
-			{
-				"doctype": "Data Import",
-				"reference_doctype": reference_doctype,
-				"import_type": "Insert New Records",
-				"import_file": file_url,
-				"payload_count": payload_count,
-				"submit_after_import": submit_after_import,
-			}
-		).insert(ignore_permissions=True)
-
-		Importer(reference_doctype, data_import=di).import_data()
-
-		return di.name
+		data_import = frappe.new_doc("Data Import")
+		data_import.import_type = "Insert New Records"
+		data_import.reference_doctype = reference_doctype
+		data_import.import_file = file_url
+		data_import.submit_after_import = submit_after_import
+		data_import.insert(ignore_permissions=True)
+		data_import.start_import()
+		return data_import.name
 
 	def test_mid_tenure_migrated_loan_import(self):
 		loan_id = f"TEST-MID-{random_string(5).upper()}"
@@ -3609,7 +3599,7 @@ class TestLoan(IntegrationTestCase):
 			]
 		)
 
-		file_url = self.create_test_csv_file(loan_csv, "mid_tenure_loan.csv")
+		file_url = self.create_test_csv_file(loan_csv, f"mid_tenure_loan_{loan_id}.csv")
 		self.run_data_import("Loan", file_url, submit_after_import=1)
 
 		self.assertTrue(frappe.db.exists("Loan", {"name": loan_id}))
@@ -3628,7 +3618,7 @@ class TestLoan(IntegrationTestCase):
 			]
 		)
 
-		file_url = self.create_test_csv_file(loan_csv, "closed_loan.csv")
+		file_url = self.create_test_csv_file(loan_csv, f"closed_loan_{loan_id}.csv")
 		self.run_data_import("Loan", file_url, submit_after_import=1)
 
 		self.assertTrue(frappe.db.exists("Loan", loan_id))
