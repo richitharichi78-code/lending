@@ -1,9 +1,6 @@
 # Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
-import os
-import tempfile
-
 import frappe
 from frappe.query_builder import DocType
 from frappe.query_builder import functions as fn
@@ -3559,34 +3556,26 @@ class TestLoan(IntegrationTestCase):
 				msg=f"Total amount mismatch at index {idx}",
 			)
 
-	def create_test_csv_file(self, content, filename):
-		with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
-			f.write(content)
-		temp_path = f.name
+	def run_data_import(self, reference_doctype, csv_content, submit_after_import=1):
+		file_doc = frappe.get_doc({
+			"doctype": "File",
+			"file_name": f"mid_tenure_loan_{random_string(6)}.csv",
+			"content": csv_content.encode(),
+			"is_private": 0,
+		}).insert(ignore_permissions=True)
 
-		with open(temp_path, "rb") as f:
-			file_doc = frappe.get_doc(
-				{
-					"doctype": "File",
-					"file_name": filename,
-					"content": f.read(),
-					"is_private": 0,
-				}
-			).save(ignore_permissions=True)
+		data_import = frappe.get_doc({
+			"doctype": "Data Import",
+			"reference_doctype": reference_doctype,
+			"import_type": "Insert New Records",
+			"import_file": file_doc.file_url,
+			"submit_after_import": submit_after_import,
+		}).insert(ignore_permissions=True)
 
-		os.unlink(temp_path)
-		return file_doc.file_url
-
-	def run_data_import(self, reference_doctype, file_url, submit_after_import=1):
-		data_import = frappe.new_doc("Data Import")
-		data_import.import_type = "Insert New Records"
-		data_import.reference_doctype = reference_doctype
-		data_import.import_file = file_url
-		data_import.submit_after_import = submit_after_import
-		data_import.insert(ignore_permissions=True)
 		frappe.db.commit()  # nosemgrep
 		data_import.start_import()
 		frappe.db.commit()  # nosemgrep
+
 		return data_import.name
 
 	def test_aaa_mid_tenure_migrated_loan_import(self):
@@ -3601,8 +3590,7 @@ class TestLoan(IntegrationTestCase):
 			]
 		)
 
-		file_url = self.create_test_csv_file(loan_csv, f"mid_tenure_loan_{loan_id}.csv")
-		self.run_data_import("Loan", file_url, submit_after_import=1)
+		self.run_data_import("Loan", loan_csv, submit_after_import=1)
 
 		self.assertTrue(frappe.db.exists("Loan", {"name": loan_id}))
 		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1}))
