@@ -3584,11 +3584,12 @@ class TestLoan(IntegrationTestCase):
 		data_import.import_file = file_url
 		data_import.submit_after_import = submit_after_import
 		data_import.insert(ignore_permissions=True)
+		frappe.db.commit()  # nosemgrep
 		data_import.start_import()
 		frappe.db.commit()  # nosemgrep
 		return data_import.name
 
-	def test_mid_tenure_migrated_loan_import(self):
+	def test_aaa_mid_tenure_migrated_loan_import(self):
 		loan_id = f"TEST-MID-{random_string(5).upper()}"
 		disb_id = f"DISB-MID-{random_string(5).upper()}"
 
