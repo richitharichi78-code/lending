@@ -3559,7 +3559,7 @@ class TestLoan(IntegrationTestCase):
 	def run_data_import(self, reference_doctype, csv_content, submit_after_import=1):
 		file_doc = frappe.get_doc({
 			"doctype": "File",
-			"file_name": f"mid_tenure_loan_{random_string(6)}.csv",
+			"file_name": f"loan_import_{random_string(6)}.csv",
 			"content": csv_content.encode(),
 			"is_private": 0,
 		}).insert(ignore_permissions=True)
@@ -3587,12 +3587,15 @@ class TestLoan(IntegrationTestCase):
 		loan_csv = "\n".join(
 			[
 				"ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan,Penalty Charges Rate,Repayment Start Date,Repayment Method,Tenure,Repayment Frequency,Disbursed Amount (Loan Import Details),Disbursement Date (Loan Import Details),Loan Disbursement ID (Loan Import Details),Opening Additional Outstanding (Loan Import Details),Opening Charge Outstanding (Loan Import Details),Opening Interest Outstanding (Loan Import Details),Opening Principal Outstanding (Loan Import Details),Opening Penalty Outstanding (Loan Import Details)",
-				f"{loan_id},Customer,_Test Loan Customer,_Test Company,2024-01-15,Term Loan Product 4,12.5,Disbursed,2024-06-15,500000,1,2,2024-02-15,Repay Over Number of Periods,12,Monthly,500000,2024-01-15,{disb_id},1500,800,28500,375000,3200",
+				f"{loan_id},Customer,_Test Customer 1,_Test Company,2024-01-15,Term Loan Product 4,12.5,Disbursed,2024-06-15,500000,1,2,2024-02-15,Repay Over Number of Periods,12,Monthly,500000,2024-01-15,{disb_id},1500,800,28500,375000,3200",
 				"",
 			]
 		)
 
 		self.run_data_import("Loan", loan_csv, submit_after_import=1)
+
+		print(frappe.db.get_all("Loan", filters={"name": ["like", "TEST-MID-%"]}, pluck="name"))
+		print(frappe.db.get_all("Loan Disbursement", filters={"name": ["like", "DISB-MID-%"]}, pluck="name"))
 
 		self.assertTrue(frappe.db.exists("Loan", {"name": loan_id}))
 		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1}))
@@ -3605,13 +3608,12 @@ class TestLoan(IntegrationTestCase):
 		loan_csv = "\n".join(
 			[
 				"ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan",
-				f"{loan_id},Customer,_Test Loan Customer,_Test Company,2024-02-20,Term Loan Product 4,11.75,Closed,2024-12-31,300000,1",
+				f"{loan_id},Customer,_Test Customer 1,_Test Company,2024-02-20,Term Loan Product 4,11.75,Closed,2024-12-31,300000,1",
 				"",
 			]
 		)
 
-		file_url = self.create_test_csv_file(loan_csv, f"closed_loan_{loan_id}.csv")
-		self.run_data_import("Loan", file_url, submit_after_import=1)
+		self.run_data_import("Loan", loan_csv, submit_after_import=1)
 
 		self.assertTrue(frappe.db.exists("Loan", loan_id))
 		self.assertFalse(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1}))
