@@ -89,7 +89,6 @@ class Loan(LoanController):
 		loan_application: DF.Link | None
 		loan_category: DF.Link | None
 		loan_charges: DF.Table[LoanDisbursementCharge]
-		loan_id: DF.Data | None
 		loan_import_details: DF.Table[LoanImportDetails]
 		loan_partner: DF.Link | None
 		loan_product: DF.Link

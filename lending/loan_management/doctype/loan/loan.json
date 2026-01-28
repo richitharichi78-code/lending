@@ -17,7 +17,6 @@
   "company",
   "posting_date",
   "status",
-  "loan_id",
   "is_imported",
   "migration_date",
   "section_break_8",
@@ -710,13 +709,6 @@
    "fieldtype": "Column Break"
   },
   {
-   "depends_on": "is_imported",
-   "fieldname": "loan_id",
-   "fieldtype": "Data",
-   "label": "Loan ID",
-   "read_only": 1
-  },
-  {
    "default": "0",
    "fieldname": "is_imported",
    "fieldtype": "Check",
@@ -755,7 +747,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-21 16:08:50.264463",
+ "modified": "2026-01-28 17:25:58.081306",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

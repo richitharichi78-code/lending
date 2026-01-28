@@ -3601,24 +3601,39 @@ class TestLoan(IntegrationTestCase):
 		loan_id = f"TEST-MID-{random_string(5).upper()}"
 		disb_id = f"DISB-MID-{random_string(5).upper()}"
 
-		loan_csv = f"""ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan,Penalty Charges Rate,Repayment Start Date,Repayment Method,Tenure,Repayment Frequency,Disbursed Amount (Loan Import Details),Disbursement Date (Loan Import Details),Loan Disbursement ID (Loan Import Details),Opening Additional Outstanding (Loan Import Details),Opening Charge Outstanding (Loan Import Details),Opening Interest Outstanding (Loan Import Details),Opening Principal Outstanding (Loan Import Details),Opening Penalty Outstanding (Loan Import Details)
-	{loan_id},Customer,_Test Loan Customer,_Test Company,2024-01-15,Term Loan Product 4,12.5,Disbursed,2024-06-15,500000,1,2,2024-02-15,Repay Over Number of Periods,12,Monthly,500000,2024-01-15,{disb_id},1500,800,28500,375000,3200
-	"""
+		loan_csv = "\n".join(
+			[
+				"ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan,Penalty Charges Rate,Repayment Start Date,Repayment Method,Tenure,Repayment Frequency,Disbursed Amount (Loan Import Details),Disbursement Date (Loan Import Details),Loan Disbursement ID (Loan Import Details),Opening Additional Outstanding (Loan Import Details),Opening Charge Outstanding (Loan Import Details),Opening Interest Outstanding (Loan Import Details),Opening Principal Outstanding (Loan Import Details),Opening Penalty Outstanding (Loan Import Details)",
+				f"{loan_id},Customer,_Test Loan Customer,_Test Company,2024-01-15,Term Loan Product 4,12.5,Disbursed,2024-06-15,500000,1,2,2024-02-15,Repay Over Number of Periods,12,Monthly,500000,2024-01-15,{disb_id},1500,800,28500,375000,3200",
+				"",
+			]
+		)
 
 		file_url = self.create_test_csv_file(loan_csv, "mid_tenure_loan.csv")
 		self.run_data_import("Loan", file_url, submit_after_import=1)
 
 		self.assertTrue(frappe.db.exists("Loan", loan_id))
-		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1, "name": disb_id}))
+
+		self.assertTrue(
+			frappe.db.exists(
+				"Loan Disbursement",
+				{"against_loan": loan_id, "is_imported": 1, "name": disb_id},
+			)
+		)
+
 		self.assertTrue(frappe.db.exists("Loan Interest Accrual", {"loan": loan_id, "is_imported": 1}))
 		self.assertTrue(frappe.db.exists("Loan Demand", {"loan": loan_id, "is_imported": 1}))
 
-	def test_closed_migrated_loan(self):
+	def test_closed_migrated_loan_import(self):
 		loan_id = f"TEST-CLOSED-{random_string(5).upper()}"
 
-		loan_csv = f"""ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan
-	{loan_id},Customer,_Test Loan Customer,_Test Company,2024-02-20,Term Loan Product 4,11.75,Closed,2024-12-31,300000,1
-	"""
+		loan_csv = "\n".join(
+			[
+				"ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan",
+				f"{loan_id},Customer,_Test Loan Customer,_Test Company,2024-02-20,Term Loan Product 4,11.75,Closed,2024-12-31,300000,1",
+				"",
+			]
+		)
 
 		file_url = self.create_test_csv_file(loan_csv, "closed_loan.csv")
 		self.run_data_import("Loan", file_url, submit_after_import=1)
