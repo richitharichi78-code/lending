@@ -408,7 +408,7 @@ class Loan(LoanController):
 	):
 		existing = frappe.db.get_value(
 			"Loan Disbursement",
-			{"against_loan": self.name, "loan_disbursement_id": loan_disbursement_id},
+			{"against_loan": self.name, "name": loan_disbursement_id, "is_imported": 1},
 			"name",
 		)
 		if existing:
@@ -458,7 +458,7 @@ class Loan(LoanController):
 
 		if frappe.db.exists(
 			"Loan Interest Accrual",
-			{"loan": self.name, "loan_disbursement": disbursement_name, "posting_date": migration_date},
+			{"loan": self.name, "loan_disbursement": disbursement_name, "posting_date": migration_date, "is_imported": 1},
 		):
 			return
 
