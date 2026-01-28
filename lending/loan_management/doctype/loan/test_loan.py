@@ -3579,6 +3579,8 @@ class TestLoan(IntegrationTestCase):
 		return data_import.name
 
 	def test_aaa_mid_tenure_migrated_loan_import(self):
+		# Added the prefix **aaa** to the test name so it runs first. It was working locally but was failing in the pytest CI.
+
 		loan_id = f"TEST-MID-{random_string(5).upper()}"
 		disb_id = f"DISB-MID-{random_string(5).upper()}"
 
