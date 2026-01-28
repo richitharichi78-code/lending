@@ -150,7 +150,7 @@ class LoanRepayment(LoanController):
 		self.allocate_amount_against_demands(amounts)
 
 	def on_update(self):
-		if frappe.flags.in_import and self.is_imported:
+		if self.is_imported:
 			return
 
 		from lending.loan_management.doctype.loan_restructure.loan_restructure import (
@@ -173,7 +173,7 @@ class LoanRepayment(LoanController):
 				)
 
 	def on_submit(self):
-		if frappe.flags.in_import and self.is_imported:
+		if self.is_imported:
 			self.update_paid_amounts()
 			return
 
@@ -1020,7 +1020,7 @@ class LoanRepayment(LoanController):
 		if flt(self.excess_amount) > 0:
 			query = query.set(loan.excess_amount_paid, loan.excess_amount_paid + self.excess_amount)
 
-		if frappe.flags.in_import and self.is_imported:
+		if self.is_imported:
 			if self.repayment_type == "Write Off Settlement":
 				if self.repayment_schedule_type != "Line of Credit":
 					query = query.set(loan.status, "Closed")

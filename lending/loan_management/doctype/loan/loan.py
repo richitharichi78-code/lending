@@ -239,7 +239,7 @@ class Loan(LoanController):
 				)
 
 	def validate_import_mandatory_fields(self):
-		if not frappe.flags.in_import:
+		if not self.is_imported:
 			return
 
 		migration_date = self.get("migration_date")
@@ -305,7 +305,7 @@ class Loan(LoanController):
 		)
 
 	def process_migrated_loan_after_submit(self):
-		if not frappe.flags.in_import:
+		if not self.is_imported:
 			return
 
 		if not self.get("migration_date"):
@@ -545,7 +545,7 @@ class Loan(LoanController):
 
 	# nosemgrep
 	def set_status(self):
-		if frappe.flags.in_import and self.get("status") == "Closed":
+		if self.is_imported and self.get("status") == "Closed":
 			return
 
 		if self.docstatus == 0:

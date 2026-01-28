@@ -3556,66 +3556,66 @@ class TestLoan(IntegrationTestCase):
 				msg=f"Total amount mismatch at index {idx}",
 			)
 
-	def run_data_import(self, reference_doctype, csv_content, submit_after_import=1):
-		file_doc = frappe.get_doc({
-			"doctype": "File",
-			"file_name": f"loan_import_{random_string(6)}.csv",
-			"content": csv_content.encode(),
-			"is_private": 0,
-		}).insert(ignore_permissions=True)
-
-		data_import = frappe.get_doc({
-			"doctype": "Data Import",
-			"reference_doctype": reference_doctype,
-			"import_type": "Insert New Records",
-			"import_file": file_doc.file_url,
-			"submit_after_import": submit_after_import,
-		}).insert(ignore_permissions=True)
-
-		frappe.db.commit()  # nosemgrep
-		data_import.start_import()
-		frappe.db.commit()  # nosemgrep
-
-		return data_import.name
-
-	def test_aaa_mid_tenure_migrated_loan_import(self):
-		# Added the prefix **aaa** to the test name so it runs first. It was working locally but was failing in the pytest CI.
-
-		loan_id = f"TEST-MID-{random_string(5).upper()}"
+	def test_mid_tenure_migrated_loan_import(self):
 		disb_id = f"DISB-MID-{random_string(5).upper()}"
-
-		loan_csv = "\n".join(
-			[
-				"ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan,Penalty Charges Rate,Repayment Start Date,Repayment Method,Tenure,Repayment Frequency,Disbursed Amount (Loan Import Details),Disbursement Date (Loan Import Details),Loan Disbursement ID (Loan Import Details),Opening Additional Outstanding (Loan Import Details),Opening Charge Outstanding (Loan Import Details),Opening Interest Outstanding (Loan Import Details),Opening Principal Outstanding (Loan Import Details),Opening Penalty Outstanding (Loan Import Details)",
-				f"{loan_id},Customer,_Test Customer 1,_Test Company,2024-01-15,Term Loan Product 4,12.5,Disbursed,2024-06-15,500000,1,2,2024-02-15,Repay Over Number of Periods,12,Monthly,500000,2024-01-15,{disb_id},1500,800,28500,375000,3200",
-				"",
-			]
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			500000,
+			"Repay Over Number of Periods",
+			12,
+			applicant_type="Customer",
+			repayment_start_date="2024-02-15",
+			posting_date="2024-01-15",
+			rate_of_interest=12.5,
+			penalty_charges_rate=2,
+			repayment_frequency="Monthly",
+			migration_date="2024-06-15",
+			is_imported=1,
+			loan_import_details=[{
+				"disbursed_amount": 500000,
+				"disbursement_date": "2024-01-15",
+				"loan_disbursement_id": disb_id,
+				"opening_additional_outstanding": 1500,
+				"opening_charge_outstanding": 800,
+				"opening_interest_outstanding": 28500,
+				"opening_principal_outstanding": 375000,
+				"opening_penalty_outstanding": 3200,
+			}],
 		)
 
-		self.run_data_import("Loan", loan_csv, submit_after_import=1)
+		loan.submit()
 
-		print(frappe.db.get_all("Loan", filters={"name": ["like", "TEST-MID-%"]}, pluck="name"))
-		print(frappe.db.get_all("Loan Disbursement", filters={"name": ["like", "DISB-MID-%"]}, pluck="name"))
+		loan.load_from_db()
 
-		self.assertTrue(frappe.db.exists("Loan", {"name": loan_id}))
-		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1}))
-		self.assertTrue(frappe.db.exists("Loan Interest Accrual", {"loan": loan_id, "is_imported": 1}))
-		self.assertTrue(frappe.db.exists("Loan Demand", {"loan": loan_id, "is_imported": 1}))
+		self.assertTrue(frappe.db.exists("Loan", {"name": loan.name}))
+		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan.name, "is_imported": 1}))
+		self.assertTrue(frappe.db.exists("Loan Interest Accrual", {"loan": loan.name, "is_imported": 1}))
+		self.assertTrue(frappe.db.exists("Loan Demand", {"loan": loan.name, "is_imported": 1}))
 
 	def test_closed_migrated_loan_import(self):
-		loan_id = f"TEST-CLOSED-{random_string(5).upper()}"
-
-		loan_csv = "\n".join(
-			[
-				"ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan",
-				f"{loan_id},Customer,_Test Customer 1,_Test Company,2024-02-20,Term Loan Product 4,11.75,Closed,2024-12-31,300000,1",
-				"",
-			]
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			500000,
+			"Repay Over Number of Periods",
+			12,
+			applicant_type="Customer",
+			repayment_start_date="2024-02-15",
+			posting_date="2024-01-15",
+			rate_of_interest=10,
+			penalty_charges_rate=2,
+			repayment_frequency="Monthly",
+			migration_date="2025-10-31",
+			is_imported=1,
+			status="Closed",
 		)
 
-		self.run_data_import("Loan", loan_csv, submit_after_import=1)
+		loan.submit()
 
-		self.assertTrue(frappe.db.exists("Loan", loan_id))
-		self.assertFalse(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1}))
-		self.assertFalse(frappe.db.exists("Loan Interest Accrual", {"loan": loan_id, "is_imported": 1}))
-		self.assertFalse(frappe.db.exists("Loan Demand", {"loan": loan_id, "is_imported": 1}))
+		loan.load_from_db()
+
+		self.assertTrue(frappe.db.exists("Loan", {"name": loan.name}))
+		self.assertFalse(frappe.db.exists("Loan Disbursement", {"against_loan": loan.name, "is_imported": 1}))
+		self.assertFalse(frappe.db.exists("Loan Interest Accrual", {"loan": loan.name, "is_imported": 1}))
+		self.assertFalse(frappe.db.exists("Loan Demand", {"loan": loan.name, "is_imported": 1}))
