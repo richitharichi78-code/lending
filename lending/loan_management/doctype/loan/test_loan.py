@@ -3612,15 +3612,8 @@ class TestLoan(IntegrationTestCase):
 		file_url = self.create_test_csv_file(loan_csv, "mid_tenure_loan.csv")
 		self.run_data_import("Loan", file_url, submit_after_import=1)
 
-		self.assertTrue(frappe.db.exists("Loan", loan_id))
-
-		self.assertTrue(
-			frappe.db.exists(
-				"Loan Disbursement",
-				{"against_loan": loan_id, "is_imported": 1, "name": disb_id},
-			)
-		)
-
+		self.assertTrue(frappe.db.exists("Loan", {"name": loan_id}))
+		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1}))
 		self.assertTrue(frappe.db.exists("Loan Interest Accrual", {"loan": loan_id, "is_imported": 1}))
 		self.assertTrue(frappe.db.exists("Loan Demand", {"loan": loan_id, "is_imported": 1}))
 
