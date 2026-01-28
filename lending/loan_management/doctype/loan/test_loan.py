@@ -1,7 +1,11 @@
 # Copyright (c) 2019, Frappe Technologies Pvt. Ltd. and Contributors
 # See license.txt
 
+import os
+import tempfile
+
 import frappe
+from frappe.core.doctype.data_import.importer import Importer, ImportFile
 from frappe.query_builder import DocType
 from frappe.query_builder import functions as fn
 from frappe.tests import IntegrationTestCase
@@ -14,6 +18,7 @@ from frappe.utils import (
 	get_datetime,
 	getdate,
 	nowdate,
+	random_string,
 )
 
 from erpnext.selling.doctype.customer.test_customer import get_customer_dict
@@ -3554,3 +3559,71 @@ class TestLoan(IntegrationTestCase):
 				flt(expected_total, 2),
 				msg=f"Total amount mismatch at index {idx}",
 			)
+
+	def create_test_csv_file(self, content, filename):
+		with tempfile.NamedTemporaryFile(mode="w", suffix=".csv", delete=False) as f:
+			f.write(content)
+		temp_path = f.name
+
+		with open(temp_path, "rb") as f:
+			file_doc = frappe.get_doc(
+				{
+					"doctype": "File",
+					"file_name": filename,
+					"content": f.read(),
+					"is_private": 0,
+				}
+			).save(ignore_permissions=True)
+
+		os.unlink(temp_path)
+		return file_doc.file_url
+
+	def run_data_import(self, reference_doctype, file_url, submit_after_import=1):
+		parsed = ImportFile(reference_doctype, file_url, import_type="Insert New Records")
+		payload_count = len(parsed.get_payloads_for_import())
+
+		di = frappe.get_doc(
+			{
+				"doctype": "Data Import",
+				"reference_doctype": reference_doctype,
+				"import_type": "Insert New Records",
+				"import_file": file_url,
+				"payload_count": payload_count,
+				"submit_after_import": submit_after_import,
+			}
+		).insert(ignore_permissions=True)
+
+		Importer(reference_doctype, data_import=di).import_data()
+
+		return di.name
+
+	def test_mid_tenure_migrated_loan_import(self):
+		loan_id = f"TEST-MID-{random_string(5).upper()}"
+		disb_id = f"DISB-MID-{random_string(5).upper()}"
+
+		loan_csv = f"""ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan,Penalty Charges Rate,Repayment Start Date,Repayment Method,Tenure,Repayment Frequency,Disbursed Amount (Loan Import Details),Disbursement Date (Loan Import Details),Loan Disbursement ID (Loan Import Details),Opening Additional Outstanding (Loan Import Details),Opening Charge Outstanding (Loan Import Details),Opening Interest Outstanding (Loan Import Details),Opening Principal Outstanding (Loan Import Details),Opening Penalty Outstanding (Loan Import Details)
+	{loan_id},Customer,_Test Loan Customer,_Test Company,2024-01-15,Term Loan Product 4,12.5,Disbursed,2024-06-15,500000,1,2,2024-02-15,Repay Over Number of Periods,12,Monthly,500000,2024-01-15,{disb_id},1500,800,28500,375000,3200
+	"""
+
+		file_url = self.create_test_csv_file(loan_csv, "mid_tenure_loan.csv")
+		self.run_data_import("Loan", file_url, submit_after_import=1)
+
+		self.assertTrue(frappe.db.exists("Loan", loan_id))
+		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1, "name": disb_id}))
+		self.assertTrue(frappe.db.exists("Loan Interest Accrual", {"loan": loan_id, "is_imported": 1}))
+		self.assertTrue(frappe.db.exists("Loan Demand", {"loan": loan_id, "is_imported": 1}))
+
+	def test_closed_migrated_loan(self):
+		loan_id = f"TEST-CLOSED-{random_string(5).upper()}"
+
+		loan_csv = f"""ID,Applicant Type,Applicant,Company,Posting Date,Loan Product,Rate of Interest (%) / Year,Status,Migration Date,Loan Amount,Is Term Loan
+	{loan_id},Customer,_Test Loan Customer,_Test Company,2024-02-20,Term Loan Product 4,11.75,Closed,2024-12-31,300000,1
+	"""
+
+		file_url = self.create_test_csv_file(loan_csv, "closed_loan.csv")
+		self.run_data_import("Loan", file_url, submit_after_import=1)
+
+		self.assertTrue(frappe.db.exists("Loan", loan_id))
+		self.assertFalse(frappe.db.exists("Loan Disbursement", {"against_loan": loan_id, "is_imported": 1}))
+		self.assertFalse(frappe.db.exists("Loan Interest Accrual", {"loan": loan_id, "is_imported": 1}))
+		self.assertFalse(frappe.db.exists("Loan Demand", {"loan": loan_id, "is_imported": 1}))

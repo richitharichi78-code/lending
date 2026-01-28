@@ -97,6 +97,8 @@
   "column_break_yskw",
   "refund_amount",
   "excess_amount_paid",
+  "loan_import_details_tab",
+  "loan_import_details",
   "connections_tab"
  ],
  "fields": [
@@ -736,12 +738,24 @@
    "fieldtype": "Date",
    "label": "Migration Date",
    "read_only": 1
+  },
+  {
+   "depends_on": "is_imported",
+   "fieldname": "loan_import_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Loan Import Details"
+  },
+  {
+   "fieldname": "loan_import_details",
+   "fieldtype": "Table",
+   "label": "Loan Import Details",
+   "options": "Loan Import Details"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-20 15:47:49.611496",
+ "modified": "2026-01-21 16:08:50.264463",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

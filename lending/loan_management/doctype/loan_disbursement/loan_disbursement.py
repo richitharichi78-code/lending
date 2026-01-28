@@ -78,7 +78,6 @@ class LoanDisbursement(LoanController):
 		is_term_loan: DF.Check
 		loan_account: DF.Link | None
 		loan_disbursement_charges: DF.Table[LoanDisbursementCharge]
-		loan_disbursement_id: DF.Data | None
 		loan_partner: DF.Link | None
 		loan_product: DF.Link | None
 		mode_of_payment: DF.Link | None
@@ -104,14 +103,13 @@ class LoanDisbursement(LoanController):
 			return
 
 	def validate(self):
-		if not self.is_imported:
-			self.set_status()
-			self.set_missing_values()
-			self.validate_disbursal_amount()
-			if self.repayment_schedule_type == "Line of Credit":
-				self.set_cyclic_date()
+		self.set_status()
+		self.set_missing_values()
+		self.validate_disbursal_amount()
+		if self.repayment_schedule_type == "Line of Credit":
+			self.set_cyclic_date()
 
-			self.validate_repayment_start_date()
+		self.validate_repayment_start_date()
 
 	def on_update(self):
 		if self.is_term_loan:

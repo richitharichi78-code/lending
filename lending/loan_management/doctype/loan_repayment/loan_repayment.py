@@ -106,19 +106,13 @@ class LoanRepayment(LoanController):
 		value_date: DF.Datetime
 	# end: auto-generated types
 
-	def autoname(self):
-		if frappe.flags.in_import and self.loan_repayment_id:
-			self.name = self.loan_repayment_id
-			return
-
 	def before_validate(self):
 		self.set_repayment_account()
 
 	def validate(self):
-		if self.get("is_imported"):
+		if frappe.flags.in_import:
+			self.is_imported = 1
 			self.check_import_total_amount()
-
-		if frappe.flags.in_import and self.loan_repayment_id:
 			return
 
 		charges = None
@@ -156,7 +150,7 @@ class LoanRepayment(LoanController):
 		self.allocate_amount_against_demands(amounts)
 
 	def on_update(self):
-		if frappe.flags.in_import and self.loan_repayment_id:
+		if frappe.flags.in_import and self.is_imported:
 			return
 
 		from lending.loan_management.doctype.loan_restructure.loan_restructure import (
@@ -179,7 +173,8 @@ class LoanRepayment(LoanController):
 				)
 
 	def on_submit(self):
-		if frappe.flags.in_import and self.loan_repayment_id:
+		if frappe.flags.in_import and self.is_imported:
+			self.update_paid_amounts()
 			return
 
 		from lending.loan_management.doctype.loan_demand.loan_demand import reverse_demands
@@ -1024,6 +1019,20 @@ class LoanRepayment(LoanController):
 
 		if flt(self.excess_amount) > 0:
 			query = query.set(loan.excess_amount_paid, loan.excess_amount_paid + self.excess_amount)
+
+		if frappe.flags.in_import and self.is_imported:
+			if self.repayment_type == "Write Off Settlement":
+				if self.repayment_schedule_type != "Line of Credit":
+					query = query.set(loan.status, "Closed")
+					query = query.set(loan.closure_date, self.value_date)
+
+			elif self.repayment_type == "Full Settlement":
+				if self.repayment_schedule_type != "Line of Credit":
+					query = query.set(loan.status, "Settled")
+					query = query.set(loan.settlement_date, self.value_date)
+
+			query.run()
+			return
 
 		if self.repayment_type == "Write Off Settlement":
 			auto_write_off_amount = flt(

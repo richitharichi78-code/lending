@@ -521,6 +521,7 @@ def create_loan_demand(
 		demand.loan_repayment = loan_repayment
 		demand.save()
 		demand.submit()
+		return demand
 
 
 def reverse_demands(
