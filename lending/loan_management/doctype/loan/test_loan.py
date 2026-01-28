@@ -3585,6 +3585,7 @@ class TestLoan(IntegrationTestCase):
 		data_import.submit_after_import = submit_after_import
 		data_import.insert(ignore_permissions=True)
 		data_import.start_import()
+		frappe.db.commit()  # nosemgrep
 		return data_import.name
 
 	def test_mid_tenure_migrated_loan_import(self):
