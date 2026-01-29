@@ -244,7 +244,8 @@
    "fieldname": "applicant_email_address",
    "fieldtype": "Data",
    "label": "Applicant Email Address",
-   "mandatory_depends_on": "eval: doc.applicant_type == \"Customer\""
+   "mandatory_depends_on": "eval: doc.applicant_type == \"Customer\"",
+   "options": "Email"
   },
   {
    "depends_on": "eval: doc.applicant_type == \"Customer\"",
@@ -337,11 +338,11 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2025-11-05 16:12:50.900024",
- "modified_by": "Administrator",
+ "modified": "2026-01-28 17:08:51.317264",
+ "modified_by": "deepesh@frappe.io",
  "module": "Loan Management",
  "name": "Loan Application",
- "naming_rule": "Expression (old style)",
+ "naming_rule": "Expression",
  "owner": "Administrator",
  "permissions": [
   {

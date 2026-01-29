@@ -32,14 +32,9 @@ class LoanApplication(Document):
 
 	if TYPE_CHECKING:
 		from frappe.types import DF
-
 		from lending.loan_management.doctype.proposed_pledge.proposed_pledge import ProposedPledge
-		from lending.loan_origination.doctype.loan_application_document.loan_application_document import (
-			LoanApplicationDocument,
-		)
-		from lending.loan_origination.doctype.loan_co_applicants.loan_co_applicants import (
-			LoanCoApplicants,
-		)
+		from lending.loan_origination.doctype.loan_application_document.loan_application_document import LoanApplicationDocument
+		from lending.loan_origination.doctype.loan_co_applicants.loan_co_applicants import LoanCoApplicants
 
 		address_line_1: DF.Data | None
 		address_line_2: DF.Data | None
