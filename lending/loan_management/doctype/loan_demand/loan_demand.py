@@ -502,6 +502,7 @@ def create_loan_demand(
 	paid_amount=0,
 	posting_date=None,
 	loan_repayment=None,
+	is_imported=False
 ):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
 	if amount:
@@ -519,9 +520,9 @@ def create_loan_demand(
 		demand.process_loan_demand = process_loan_demand
 		demand.paid_amount = paid_amount
 		demand.loan_repayment = loan_repayment
+		demand.is_imported = is_imported
 		demand.save()
 		demand.submit()
-		return demand
 
 
 def reverse_demands(

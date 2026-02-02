@@ -28,6 +28,9 @@ from erpnext.accounts.general_ledger import process_gl_map
 
 from lending.loan_management.controllers.loan_controller import LoanController
 from lending.loan_management.doctype.loan_demand.loan_demand import create_loan_demand
+from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
+	make_loan_interest_accrual_entry,
+)
 from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log import (
 	create_loan_limit_change_log,
 )
@@ -239,15 +242,10 @@ class Loan(LoanController):
 				)
 
 	def validate_import_mandatory_fields(self):
-		if not self.is_imported:
-			return
-
-		migration_date = self.get("migration_date")
+		migration_date = self.get_migration_date_for_import()
 		if not migration_date:
-			return
-
-		if self.get("status") == "Closed":
-			frappe.db.set_value("Loan", self.name, "status", "Closed")
+			if self.get("is_imported") and self.get("migration_date") and self.get("status") == "Closed":
+				frappe.db.set_value("Loan", self.name, "status", "Closed")
 			return
 
 		details = self.get("loan_import_details") or []
@@ -295,6 +293,19 @@ class Loan(LoanController):
 					).format(idx, ", ".join([frappe.bold(x) for x in missing_labels]))
 				)
 
+	def get_migration_date_for_import(self):
+		if not self.get("is_imported"):
+			return None
+
+		migration_date = self.get("migration_date")
+		if not migration_date:
+			return None
+
+		if self.get("status") == "Closed":
+			return None
+
+		return migration_date
+
 	def is_line_of_credit_loan(self):
 		if self.get("repayment_schedule_type"):
 			return self.repayment_schedule_type == "Line of Credit"
@@ -305,13 +316,8 @@ class Loan(LoanController):
 		)
 
 	def process_migrated_loan_after_submit(self):
-		if not self.is_imported:
-			return
-
-		if not self.get("migration_date"):
-			return
-
-		if self.get("status")== "Closed":
+		migration_date = self.get_migration_date_for_import()
+		if not migration_date:
 			return
 
 		precision = cint(frappe.db.get_default("currency_precision")) or 2
@@ -334,7 +340,7 @@ class Loan(LoanController):
 				tenure = self.get("repayment_periods")
 				repayment_start_date = self.get("repayment_start_date")
 
-			disb_name = self.create_migrated_loan_disbursement(
+			disb_name = self.import_loan_disbursement(
 				loan_disbursement_id,
 				disbursement_date,
 				disbursed_amount,
@@ -380,7 +386,7 @@ class Loan(LoanController):
 				):
 					continue
 
-				demand = create_loan_demand(
+				create_loan_demand(
 					loan=self.name,
 					demand_date=migration_date,
 					demand_type=demand_type,
@@ -389,13 +395,10 @@ class Loan(LoanController):
 					loan_disbursement=disb_name,
 					posting_date=migration_date,
 					paid_amount=0,
+					is_imported=1,
 				)
 
-				if demand:
-					frappe.db.set_value("Loan Demand", demand.name, "is_imported", 1)
-
-
-	def create_migrated_loan_disbursement(
+	def import_loan_disbursement(
 		self,
 		loan_disbursement_id,
 		disbursement_date,
@@ -467,49 +470,42 @@ class Loan(LoanController):
 		penalty_outstanding = flt(penalty_outstanding or 0, precision)
 		additional_outstanding = flt(additional_outstanding or 0, precision)
 
-		common = {
-			"doctype": "Loan Interest Accrual",
-			"company": self.company,
-			"loan": self.name,
-			"loan_disbursement": disbursement_name,
-			"posting_date": migration_date,
-			"accrual_date": migration_date,
-			"accrual_type": "Regular",
-			"applicant_type": self.applicant_type,
-			"applicant": self.applicant,
-			"loan_product": self.loan_product,
-			"rate_of_interest": flt(self.get("rate_of_interest") or 0, precision),
-			"is_imported": 1,
-		}
+		rate_of_interest = flt(self.get("rate_of_interest") or 0, precision)
 
-		if interest_outstanding > 0:
-			doc = frappe.get_doc(
-				{
-					**common,
-					"interest_type": "Normal Interest",
-					"base_amount": principal_outstanding,
-					"interest_amount": interest_outstanding,
-					"additional_interest_amount": 0,
-					"penalty_amount": 0,
-				}
+		if flt(interest_outstanding, precision) > 0:
+			make_loan_interest_accrual_entry(
+				loan=self.name,
+				base_amount=principal_outstanding,
+				interest_amount=interest_outstanding,
+				process_loan_interest=0,
+				start_date=migration_date,
+				posting_date=migration_date,
+				accrual_type="Regular",
+				interest_type="Normal Interest",
+				rate_of_interest=rate_of_interest,
+				additional_interest=0,
+				accrual_date=migration_date,
+				loan_disbursement=disbursement_name,
+				is_imported=1,
 			)
-			doc.insert(ignore_permissions=True)
-			doc.submit()
 
 		total_penal = flt(penalty_outstanding + additional_outstanding, precision)
-		if total_penal > 0:
-			doc = frappe.get_doc(
-				{
-					**common,
-					"interest_type": "Penal Interest",
-					"base_amount": 0,
-					"interest_amount": total_penal,
-					"additional_interest_amount": total_penal,
-					"penalty_amount": 0,
-				}
+		if flt(total_penal, precision) > 0:
+			make_loan_interest_accrual_entry(
+				loan=self.name,
+				base_amount=0,
+				interest_amount=total_penal,
+				process_loan_interest=0,
+				start_date=migration_date,
+				posting_date=migration_date,
+				accrual_type="Regular",
+				interest_type="Penal Interest",
+				rate_of_interest=rate_of_interest,
+				additional_interest=total_penal,
+				accrual_date=migration_date,
+				loan_disbursement=disbursement_name,
+				is_imported=1,
 			)
-			doc.insert(ignore_permissions=True)
-			doc.submit()
 
 	def on_submit(self):
 		self.link_loan_security_assignment()
@@ -2281,16 +2277,26 @@ def get_dashboard_info(loan):
 	return loan_info
 
 def update_demand_generated_for_repayment_schedule(loan_name, disbursement_name, migration_date):
+	parents = frappe.db.get_all(
+		"Loan Repayment Schedule",
+		filters={
+			"loan": loan_name,
+			"loan_disbursement": disbursement_name,
+			"docstatus": 1,
+			"status": "Active",
+		},
+		pluck="name",
+	)
+
+	if not parents:
+		return
+
 	frappe.db.sql(
 		"""
-		UPDATE `tabRepayment Schedule` rs
-		INNER JOIN `tabLoan Repayment Schedule` lrs ON lrs.name = rs.parent
-		SET rs.demand_generated = 1
-		WHERE lrs.loan = %s
-		  AND lrs.loan_disbursement = %s
-		  AND lrs.docstatus = 1
-		  AND lrs.status = 'Active'
-		  AND rs.payment_date < %s
+		UPDATE `tabRepayment Schedule`
+		SET demand_generated = 1
+		WHERE parent IN %(parents)s
+		  AND payment_date < %(migration_date)s
 		""",
-		(loan_name, disbursement_name, migration_date),
+		{"parents": tuple(parents), "migration_date": migration_date},
 	)
