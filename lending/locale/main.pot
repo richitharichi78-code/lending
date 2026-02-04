@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lending VERSION\n"
 "Report-Msgid-Bugs-To: contact@frappe.io\n"
-"POT-Creation-Date: 2026-01-25 09:37+0000\n"
-"PO-Revision-Date: 2026-01-25 09:37+0000\n"
+"POT-Creation-Date: 2026-02-01 09:42+0000\n"
+"PO-Revision-Date: 2026-02-01 09:42+0000\n"
 "Last-Translator: contact@frappe.io\n"
 "Language-Team: contact@frappe.io\n"
 "MIME-Version: 1.0\n"
@@ -164,7 +164,7 @@ msgstr ""
 msgid "Add to first repayment"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2018
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2033
 msgid "Addition Interest Waiver Account is mandatory"
 msgstr ""
 
@@ -201,7 +201,7 @@ msgstr ""
 msgid "Additional Interest Income"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2034
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2049
 msgid "Additional Interest Income Account is mandatory"
 msgstr ""
 
@@ -211,7 +211,7 @@ msgstr ""
 msgid "Additional Interest Receivable"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2028
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2043
 msgid "Additional Interest Receivable Account is mandatory"
 msgstr ""
 
@@ -233,7 +233,7 @@ msgstr ""
 msgid "Additional Interest Waiver"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2037
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2052
 msgid "Additional Interest Waiver Account is mandatory"
 msgstr ""
 
@@ -331,7 +331,7 @@ msgstr ""
 msgid "Advance Payment"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2085
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2100
 msgid "Against Account is mandatory"
 msgstr ""
 
@@ -888,7 +888,7 @@ msgstr ""
 msgid "Cannot create loan until application is approved"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2376
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2391
 msgid "Cannot make Advance or Pre Payments during moratorium period. (Moratorium End Date: {}, Posting Date: {})"
 msgstr ""
 
@@ -1302,7 +1302,7 @@ msgstr ""
 msgid "Credit Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2144
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2159
 msgid "Credit Account is mandatory"
 msgstr ""
 
@@ -1394,7 +1394,7 @@ msgstr ""
 msgid "Customer Refund Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2056
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2071
 msgid "Customer Refund Account is mandatory"
 msgstr ""
 
@@ -2127,7 +2127,7 @@ msgstr ""
 msgid "Interest Income Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1974
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1989
 msgid "Interest Income Account is mandatory"
 msgstr ""
 
@@ -2152,7 +2152,8 @@ msgstr ""
 msgid "Interest Receivable Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1969
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1964
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1984
 msgid "Interest Receivable Account is mandatory"
 msgstr ""
 
@@ -2180,7 +2181,7 @@ msgstr ""
 msgid "Interest Waiver Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2051
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2066
 msgid "Interest Waiver Account is mandatory"
 msgstr ""
 
@@ -2190,7 +2191,7 @@ msgstr ""
 msgid "Interest Waiver Amount"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:418
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:419
 msgid "Interest Waiver Amount cannot be greater than overdue interest"
 msgstr ""
 
@@ -2443,9 +2444,10 @@ msgstr ""
 msgid "Loan Account and Payment Account cannot be same"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1965
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1995
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2023
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1966
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1980
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2010
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2038
 msgid "Loan Account is mandatory"
 msgstr ""
 
@@ -3735,7 +3737,7 @@ msgstr ""
 msgid "Other Charges Waiver"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:421
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:422
 msgid "Other Charges Waiver cannot be greater than overdue charges"
 msgstr ""
 
@@ -3837,7 +3839,7 @@ msgstr ""
 msgid "Partner Interest Share"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2148
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2163
 msgid "Partner Interest Share is mandatory"
 msgstr ""
 
@@ -3911,7 +3913,7 @@ msgstr ""
 msgid "Payable Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2146
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2161
 msgid "Payable Account is mandatory"
 msgstr ""
 
@@ -3942,9 +3944,9 @@ msgstr ""
 msgid "Payment Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1976
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2123
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2265
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1991
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2138
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2280
 msgid "Payment Account is mandatory"
 msgstr ""
 
@@ -4043,7 +4045,7 @@ msgstr ""
 msgid "Penalty Income Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2005
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2020
 msgid "Penalty Income Account is mandatory"
 msgstr ""
 
@@ -4069,7 +4071,7 @@ msgstr ""
 msgid "Penalty Receivable Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1999
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2014
 msgid "Penalty Receivable Account is mandatory"
 msgstr ""
 
@@ -4091,7 +4093,7 @@ msgstr ""
 msgid "Penalty Waiver Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:424
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:425
 msgid "Penalty Waiver cannot be greater than overdue penalty interest"
 msgstr ""
 
@@ -4198,7 +4200,7 @@ msgstr ""
 msgid "Please set Broken Period Interest Recovery Account for the Loan Product {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2060
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2075
 msgid "Please set Customer Refund Account in Loan Product {0}"
 msgstr ""
 
@@ -4238,7 +4240,7 @@ msgstr ""
 msgid "Please set {0} Receivable Account in Loan Product {1}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2316
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2331
 msgid "Please set {0} in either Company or Loan Product"
 msgstr ""
 
@@ -5010,7 +5012,7 @@ msgstr ""
 msgid "Restructured"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2125
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2140
 msgid "Round Off Account is mandatory"
 msgstr ""
 
@@ -5343,11 +5345,11 @@ msgstr ""
 msgid "The amount paid cannot be greater than the payable amount for Security Deposit Adjustment repayments."
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3128
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3143
 msgid "The following disbursements do not exist or are not submitted: {}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3114
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3129
 msgid "The following loans do not exist: {}"
 msgstr ""
 
@@ -5570,7 +5572,7 @@ msgstr ""
 msgid "Unaccrued Interest Waiver"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:429
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:430
 msgid "Unaccrued Interest Waiver cannot be greater than overdue amount"
 msgstr ""
 
@@ -5728,7 +5730,7 @@ msgstr ""
 msgid "Waiver Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2276
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2291
 msgid "Waiver account not set for charge {0} in Loan Product {1}"
 msgstr ""
 
@@ -5797,7 +5799,7 @@ msgstr ""
 msgid "Write Off Recovery Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2077
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2092
 msgid "Write Off Recovery Account is mandatory"
 msgstr ""
 
