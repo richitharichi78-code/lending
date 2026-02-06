@@ -2,7 +2,10 @@
 # See license.txt
 
 import frappe
+from frappe.query_builder import DocType
+from frappe.query_builder.functions import Sum
 from frappe.tests import IntegrationTestCase
+from frappe.utils import date_diff, flt
 
 from lending.loan_management.doctype.process_loan_demand.process_loan_demand import (
 	process_daily_loan_demands,
@@ -105,16 +108,186 @@ class TestLoanRestructure(IntegrationTestCase):
 			pluck="name",
 		)
 
-		self.assertEqual(len(repayments), 5)
+		self.assertEqual(len(repayments), 7)
+
+	def test_clears_principal_overdue_demands_on_normal_restructure(self):
+		set_loan_accrual_frequency(loan_accrual_frequency="Daily")
+
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			100000,
+			"Repay Over Number of Periods",
+			22,
+			repayment_start_date="2024-04-05",
+			posting_date="2024-02-20",
+			rate_of_interest=8.5,
+			applicant_type="Customer",
+			penalty_charges_rate=36,
+		)
+
+		loan.submit()
+
+		make_loan_disbursement_entry(
+			loan.name, loan.loan_amount, disbursement_date="2024-02-20", repayment_start_date="2024-04-05"
+		)
+
+		process_loan_interest_accrual_for_loans(
+			posting_date="2024-04-04", loan=loan.name, company="_Test Company"
+		)
+
+		process_daily_loan_demands(loan=loan.name, posting_date="2024-04-05")
+
+		process_loan_interest_accrual_for_loans(loan=loan.name, posting_date="2024-04-10")
+
+		loan_restructure = create_loan_restructure(
+			loan=loan.name,
+			restructure_date="2024-04-11",
+			interest_waiver_amount=500,
+			penal_waiver_amount=10,
+			other_charges_waiver=0,
+		)
+
+		loan_restructure.status = "Approved"
+		loan_restructure.save()
+
+		LoanDemand = DocType("Loan Demand")
+
+		total_outstanding = (
+			frappe.qb.from_(LoanDemand)
+			.select(Sum(LoanDemand.outstanding_amount))
+			.where(LoanDemand.loan == loan.name)
+			.where(LoanDemand.demand_type == "EMI")
+			.where(LoanDemand.demand_subtype == "Principal")
+			.where(LoanDemand.docstatus == 1)
+		).run()[0][0]
+
+		self.assertEqual(flt(total_outstanding), 0)
+
+	def test_unaccrued_interest_capitalization_gl_entries(self):
+		set_loan_accrual_frequency(loan_accrual_frequency="Daily")
+
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			2300000,
+			"Repay Over Number of Periods",
+			24,
+			repayment_start_date="2025-11-05",
+			posting_date="2025-10-09",
+			rate_of_interest=27,
+			applicant_type="Customer",
+			penalty_charges_rate=36,
+		)
+
+		loan.submit()
+
+		make_loan_disbursement_entry(
+			loan.name, loan.loan_amount, disbursement_date="2025-10-09", repayment_start_date="2025-11-05"
+		)
+
+		process_loan_interest_accrual_for_loans(posting_date="2025-12-04", loan=loan.name, company="_Test Company")
+		process_daily_loan_demands(loan=loan.name, posting_date="2026-01-05")
+		process_loan_interest_accrual_for_loans(posting_date="2026-02-03", loan=loan.name, company="_Test Company")
+
+		loan_restructure = create_loan_restructure(
+			loan=loan.name,
+			restructure_date="2026-02-04",
+			interest_waiver_amount=1001,
+			unaccrued_interest_waiver=1004,
+			penal_waiver_amount=1002,
+		)
+
+		loan_restructure.status = "Approved"
+		loan_restructure.save()
+
+		loan_repayment = frappe.db.get_value(
+			"Loan Repayment",
+			{
+				"loan_restructure": loan_restructure.name,
+				"docstatus": 1,
+				"repayment_type": "Interest Capitalization",
+				"unbooked_interest_paid": (">", 0),
+			},
+			["name", "unbooked_interest_paid"],
+			as_dict=True,
+		)
+
+		amount = flt(loan_repayment.unbooked_interest_paid, 2)
+
+		gl_entries = frappe.db.get_all(
+			"GL Entry",
+			filters={
+				"voucher_type": "Loan Repayment",
+				"voucher_no": loan_repayment.name,
+				"is_cancelled": 0,
+			},
+			fields=["account", "debit", "credit"],
+		)
+
+		expected_entries = [
+			{"account": "Loan Account - _TC", "debit": amount, "credit": 0.0},
+			{"account": "Interest Receivable - _TC", "debit": 0.0, "credit": amount},
+		]
+
+		for expected in expected_entries:
+			self.assertIn(expected, gl_entries, f"Missing GL entry: {expected}")
+
+	def test_normal_restructure_first_emi_schedule_days(self):
+		set_loan_accrual_frequency(loan_accrual_frequency="Daily")
+
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			1200000,
+			"Repay Over Number of Periods",
+			36,
+			repayment_start_date="2025-10-05",
+			posting_date="2024-09-19",
+			rate_of_interest=24,
+			applicant_type="Customer",
+			penalty_charges_rate=36,
+		)
+
+		loan.submit()
+
+		make_loan_disbursement_entry(
+			loan.name, loan.loan_amount, disbursement_date="2024-09-19", repayment_start_date="2025-10-05"
+		)
+
+		process_daily_loan_demands(loan=loan.name, posting_date="2026-01-05")
+
+		restructure_date = "2026-02-02"
+		repayment_start_date = "2026-02-05"
+
+		loan_restructure = create_loan_restructure(
+			loan=loan.name,
+			restructure_date=restructure_date,
+			repayment_start_date=repayment_start_date
+		)
+		loan_restructure.status = "Approved"
+		loan_restructure.save()
+
+		loan_repayment_schedule = frappe.get_doc(
+			"Loan Repayment Schedule", {"loan": loan.name, "docstatus": 1, "loan_restructure": loan_restructure.name}
+		)
+
+		date_diff_value = date_diff(repayment_start_date, restructure_date)
+		number_of_days_for_first_emi = loan_repayment_schedule.repayment_schedule[0].number_of_days
+
+		self.assertEqual(date_diff_value, number_of_days_for_first_emi)
 
 
 def create_loan_restructure(
 	loan,
 	restructure_date,
-	interest_waiver_amount,
-	penal_waiver_amount,
-	other_charges_waiver,
+	repayment_start_date=None,
+	interest_waiver_amount=None,
+	unaccrued_interest_waiver=None,
+	penal_waiver_amount=None,
+	other_charges_waiver=None,
 	treatment_of_normal_interest="Capitalize",
+	unaccrued_interest_treatment="Capitalize",
 	treatment_of_penal_interest="Capitalize",
 	treatment_of_other_charges="Capitalize",
 ):
@@ -122,11 +295,14 @@ def create_loan_restructure(
 	doc = frappe.new_doc("Loan Restructure")
 	doc.loan = loan
 	doc.restructure_date = restructure_date
+	doc.repayment_start_date = repayment_start_date or restructure_date
 	doc.interest_waiver_amount = interest_waiver_amount
+	doc.unaccrued_interest_waiver = unaccrued_interest_waiver
 	doc.penal_interest_waiver = penal_waiver_amount
 	doc.other_charges_waiver = other_charges_waiver
 	doc.restructure_type = "Normal Restructure"
 	doc.treatment_of_normal_interest = treatment_of_normal_interest
+	doc.unaccrued_interest_treatment = unaccrued_interest_treatment
 	doc.treatment_of_penal_interest = treatment_of_penal_interest
 	doc.treatment_of_other_charges = treatment_of_other_charges
 	doc.submit()
