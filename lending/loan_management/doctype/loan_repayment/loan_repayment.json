@@ -16,12 +16,8 @@
   "applicant_type",
   "loan_product",
   "bulk_repayment_log",
-<<<<<<< feat-loan-import-tool-test1
   "is_imported",
-  "loan_repayment_id",
-=======
   "full_settlement_job",
->>>>>>> develop
   "column_break_3",
   "company",
   "posting_date",
@@ -559,7 +555,6 @@
    "options": "Bulk Repayment Log"
   },
   {
-<<<<<<< feat-loan-import-tool-test1
    "default": "0",
    "fieldname": "is_imported",
    "fieldtype": "Check",
@@ -567,26 +562,16 @@
    "read_only": 1
   },
   {
-   "depends_on": "is_imported",
-   "fieldname": "loan_repayment_id",
-   "fieldtype": "Data",
-   "label": "Loan Repayment ID",
-=======
    "fieldname": "full_settlement_job",
    "fieldtype": "Data",
-   "label": "Full Settlement Job ",
->>>>>>> develop
+   "label": "Full Settlement Job",
    "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
-<<<<<<< feat-loan-import-tool-test1
- "modified": "2026-01-28 15:19:52.690499",
-=======
  "modified": "2026-02-06 15:41:39.868624",
->>>>>>> develop
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Repayment",
