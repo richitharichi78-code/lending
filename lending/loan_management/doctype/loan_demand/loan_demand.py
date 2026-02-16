@@ -30,6 +30,7 @@ class LoanDemand(LoanController):
 		demand_type: DF.Literal["EMI", "Penalty", "Normal", "Charges", "BPI", "Additional Interest"]
 		disbursement_date: DF.Date | None
 		invoice_date: DF.Date | None
+		is_partial_pre_paid_interest: DF.Check
 		is_term_loan: DF.Check
 		loan: DF.Link | None
 		loan_disbursement: DF.Link | None
@@ -501,6 +502,7 @@ def create_loan_demand(
 	paid_amount=0,
 	posting_date=None,
 	loan_repayment=None,
+	is_partial_pre_paid_interest=0,
 ):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
 	if amount:
@@ -518,6 +520,7 @@ def create_loan_demand(
 		demand.process_loan_demand = process_loan_demand
 		demand.paid_amount = paid_amount
 		demand.loan_repayment = loan_repayment
+		demand.is_partial_pre_paid_interest = is_partial_pre_paid_interest
 		demand.save()
 		demand.submit()
 

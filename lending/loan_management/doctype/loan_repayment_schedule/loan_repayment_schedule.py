@@ -163,6 +163,7 @@ class LoanRepaymentSchedule(Document):
 		principal_balance = prepayment_details.balance_principal
 		paid_interest_amount = interest_amount
 		paid_principal_amount = principal_amount
+		is_partial_pre_paid_interest = 0
 
 		if (
 			prepayment_details.adjusted_unaccrued_interest
@@ -170,6 +171,7 @@ class LoanRepaymentSchedule(Document):
 		):
 			interest_amount = prepayment_details.adjusted_unaccrued_interest
 			paid_interest_amount = interest_amount
+			is_partial_pre_paid_interest = 1
 
 		if flt(interest_amount) > 0:
 			create_loan_demand(
@@ -184,6 +186,7 @@ class LoanRepaymentSchedule(Document):
 				if self.restructure_type == "Advance Payment"
 				else None,
 				paid_amount=paid_interest_amount,
+				is_partial_pre_paid_interest=is_partial_pre_paid_interest,
 			)
 
 		create_loan_demand(
