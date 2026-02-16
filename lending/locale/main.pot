@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lending VERSION\n"
 "Report-Msgid-Bugs-To: contact@frappe.io\n"
-"POT-Creation-Date: 2026-02-08 09:42+0000\n"
-"PO-Revision-Date: 2026-02-08 09:42+0000\n"
+"POT-Creation-Date: 2026-02-15 09:43+0000\n"
+"PO-Revision-Date: 2026-02-15 09:43+0000\n"
 "Last-Translator: contact@frappe.io\n"
 "Language-Team: contact@frappe.io\n"
 "MIME-Version: 1.0\n"
@@ -53,7 +53,7 @@ msgstr ""
 msgid "Account {0} does not belong to company {1}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:185
+#: lending/loan_management/doctype/loan/loan.py:186
 msgid "Account {0} does not belongs to company {1}"
 msgstr ""
 
@@ -164,7 +164,7 @@ msgstr ""
 msgid "Add to first repayment"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2032
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2036
 msgid "Addition Interest Waiver Account is mandatory"
 msgstr ""
 
@@ -201,7 +201,7 @@ msgstr ""
 msgid "Additional Interest Income"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2048
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2052
 msgid "Additional Interest Income Account is mandatory"
 msgstr ""
 
@@ -211,7 +211,7 @@ msgstr ""
 msgid "Additional Interest Receivable"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2042
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2046
 msgid "Additional Interest Receivable Account is mandatory"
 msgstr ""
 
@@ -233,7 +233,7 @@ msgstr ""
 msgid "Additional Interest Waiver"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2051
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2055
 msgid "Additional Interest Waiver Account is mandatory"
 msgstr ""
 
@@ -331,7 +331,7 @@ msgstr ""
 msgid "Advance Payment"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2099
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2103
 msgid "Against Account is mandatory"
 msgstr ""
 
@@ -482,7 +482,7 @@ msgstr ""
 msgid "Amount cannot be zero"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1647
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1650
 msgid "Amount for advance payment must be between one to two EMI amount"
 msgstr ""
 
@@ -515,7 +515,7 @@ msgstr ""
 msgid "Amounts"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:114
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:113
 msgid "Another Loan Restructure is already initiated for this Loan"
 msgstr ""
 
@@ -528,8 +528,7 @@ msgstr ""
 #. Label of the applicant (Dynamic Link) field in DocType 'Loan Repayment'
 #. Label of the applicant (Dynamic Link) field in DocType 'Loan Restructure'
 #. Label of the applicant (Data) field in DocType 'Loan Security Assignment'
-#. Label of the applicant (Dynamic Link) field in DocType 'Loan Security
-#. Release'
+#. Label of the applicant (Data) field in DocType 'Loan Security Release'
 #. Label of the applicant (Dynamic Link) field in DocType 'Loan Security
 #. Shortfall'
 #. Label of the applicant (Link) field in DocType 'Loan Transfer'
@@ -676,7 +675,7 @@ msgstr ""
 msgid "As on Date"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:67
+#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:66
 msgid "Atlest one security needs to be assigned"
 msgstr ""
 
@@ -879,11 +878,11 @@ msgstr ""
 msgid "Cancelled"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:581
+#: lending/loan_management/doctype/loan/loan.py:582
 msgid "Cannot close loan as there is an outstanding of {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:627
+#: lending/loan_management/doctype/loan/loan.py:628
 msgid "Cannot close this loan until full repayment"
 msgstr ""
 
@@ -891,11 +890,11 @@ msgstr ""
 msgid "Cannot create loan until application is approved"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2389
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2393
 msgid "Cannot make Advance or Pre Payments during moratorium period. (Moratorium End Date: {}, Posting Date: {})"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:286
+#: lending/loan_management/doctype/loan/loan.py:287
 msgid "Cannot un mark as NPA before watch period end date"
 msgstr ""
 
@@ -1279,7 +1278,7 @@ msgstr ""
 msgid "Cost Center"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:195
+#: lending/loan_management/doctype/loan/loan.py:196
 msgid "Cost center is mandatory for loans having rate of interest greater than 0"
 msgstr ""
 
@@ -1305,7 +1304,7 @@ msgstr ""
 msgid "Credit Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2157
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2161
 msgid "Credit Account is mandatory"
 msgstr ""
 
@@ -1397,7 +1396,7 @@ msgstr ""
 msgid "Customer Refund Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2070
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2074
 msgid "Customer Refund Account is mandatory"
 msgstr ""
 
@@ -1627,7 +1626,7 @@ msgstr ""
 msgid "Disbursed Amount"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:409
+#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:408
 msgid "Disbursed Amount cannot be more than {0} as per loan limit or assigned security value"
 msgstr ""
 
@@ -1635,7 +1634,7 @@ msgstr ""
 msgid "Disbursed Amount: {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:404
+#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:403
 msgid "Disbursed amount cannot be zero"
 msgstr ""
 
@@ -1685,11 +1684,11 @@ msgstr ""
 msgid "Disbursement References"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:648
+#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:647
 msgid "Disbursement against loan:"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:421
+#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:420
 msgid "Disbursement amount cannot be greater than available limit amount"
 msgstr ""
 
@@ -1698,7 +1697,7 @@ msgstr ""
 msgid "Disbursement and Repayment"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:416
+#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:415
 msgid "Disbursement date is out of approved limit dates"
 msgstr ""
 
@@ -1946,11 +1945,11 @@ msgstr ""
 msgid "Flat Interest Rate"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:238
+#: lending/loan_management/doctype/loan/loan.py:239
 msgid "Flat Interest Rate loans can only have monthly and yearly repayment frequency"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:234
+#: lending/loan_management/doctype/loan/loan.py:235
 msgid "Flat Interest Rate loans cannot have 'Repay Fixed Amount per Period' repayment method"
 msgstr ""
 
@@ -2135,7 +2134,7 @@ msgstr ""
 msgid "Interest Income Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1988
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1992
 msgid "Interest Income Account is mandatory"
 msgstr ""
 
@@ -2160,7 +2159,7 @@ msgstr ""
 msgid "Interest Receivable Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1983
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1987
 msgid "Interest Receivable Account is mandatory"
 msgstr ""
 
@@ -2188,7 +2187,7 @@ msgstr ""
 msgid "Interest Waiver Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2065
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2069
 msgid "Interest Waiver Account is mandatory"
 msgstr ""
 
@@ -2198,7 +2197,7 @@ msgstr ""
 msgid "Interest Waiver Amount"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:419
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:418
 msgid "Interest Waiver Amount cannot be greater than overdue interest"
 msgstr ""
 
@@ -2243,10 +2242,12 @@ msgstr ""
 #. Label of the is_npa (Check) field in DocType 'Loan'
 #. Label of the is_npa (Check) field in DocType 'Loan Interest Accrual'
 #. Label of the is_npa (Check) field in DocType 'Loan Repayment'
+#. Label of the is_npa (Check) field in DocType 'Loan Restructure'
 #. Label of the is_npa (Check) field in DocType 'Loan Write Off'
 #: lending/loan_management/doctype/loan/loan.json
 #: lending/loan_management/doctype/loan_interest_accrual/loan_interest_accrual.json
 #: lending/loan_management/doctype/loan_repayment/loan_repayment.json
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.json
 #: lending/loan_management/doctype/loan_write_off/loan_write_off.json
 msgid "Is NPA"
 msgstr ""
@@ -2451,9 +2452,9 @@ msgstr ""
 msgid "Loan Account and Payment Account cannot be same"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1979
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2009
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2037
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1983
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2013
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2041
 msgid "Loan Account is mandatory"
 msgstr ""
 
@@ -3100,11 +3101,7 @@ msgstr ""
 msgid "Loan Restructure is in process. Cannot make any loan adjustment"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:100
-msgid "Loan Securities with different LTV ratio cannot be pledged against one loan"
-msgstr ""
-
-#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:145
+#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:125
 msgid "Loan Securities worth {0} needed more to book the loan"
 msgstr ""
 
@@ -3117,6 +3114,7 @@ msgstr ""
 #. Label of a Link in the Lending Workspace
 #: lending/loan_management/doctype/loan_security/loan_security.json
 #: lending/loan_management/doctype/loan_security_price/loan_security_price.json
+#: lending/loan_management/doctype/loan_security_release/pledged_security_summary.html:4
 #: lending/loan_management/doctype/pledge/pledge.json
 #: lending/loan_management/doctype/proposed_pledge/proposed_pledge.json
 #: lending/loan_management/doctype/unpledge/unpledge.json
@@ -3269,7 +3267,7 @@ msgstr ""
 msgid "Loan Security Value after unpledge is {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:75
+#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:74
 msgid "Loan Security {0} added multiple times"
 msgstr ""
 
@@ -3324,11 +3322,11 @@ msgstr ""
 msgid "Loan Write Off will be automatically created on loan closure request if pending amount is below this limit"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:412
+#: lending/loan_management/doctype/loan/loan.py:413
 msgid "Loan amount cannot be greater than {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:416
+#: lending/loan_management/doctype/loan/loan.py:417
 msgid "Loan amount is mandatory"
 msgstr ""
 
@@ -3610,11 +3608,11 @@ msgstr ""
 msgid "New Repayment Start Date"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:339
+#: lending/loan_management/doctype/loan/loan.py:340
 msgid "New maximum limit amount cannot be lesser than the utilized limit amount"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:834
+#: lending/loan_management/doctype/loan/loan.py:835
 msgid "No excess amount pending for refund"
 msgstr ""
 
@@ -3623,7 +3621,7 @@ msgid "No loans found for this applicant or branch"
 msgstr ""
 
 #: lending/loan_management/doctype/loan_application/loan_application.py:214
-#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:117
+#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:92
 msgid "No valid Loan Security Price found for {0}"
 msgstr ""
 
@@ -3718,7 +3716,7 @@ msgstr ""
 msgid "One Time"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:778
+#: lending/loan_management/doctype/loan/loan.py:779
 msgid "Only submitted unpledge requests can be approved"
 msgstr ""
 
@@ -3744,7 +3742,7 @@ msgstr ""
 msgid "Other Charges Waiver"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:422
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:421
 msgid "Other Charges Waiver cannot be greater than overdue charges"
 msgstr ""
 
@@ -3846,7 +3844,7 @@ msgstr ""
 msgid "Partner Interest Share"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2161
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2165
 msgid "Partner Interest Share is mandatory"
 msgstr ""
 
@@ -3920,7 +3918,7 @@ msgstr ""
 msgid "Payable Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2159
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2163
 msgid "Payable Account is mandatory"
 msgstr ""
 
@@ -3951,9 +3949,9 @@ msgstr ""
 msgid "Payment Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1990
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2136
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2278
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:1994
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2140
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2282
 msgid "Payment Account is mandatory"
 msgstr ""
 
@@ -4052,7 +4050,7 @@ msgstr ""
 msgid "Penalty Income Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2019
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2023
 msgid "Penalty Income Account is mandatory"
 msgstr ""
 
@@ -4078,7 +4076,7 @@ msgstr ""
 msgid "Penalty Receivable Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2013
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2017
 msgid "Penalty Receivable Account is mandatory"
 msgstr ""
 
@@ -4100,7 +4098,7 @@ msgstr ""
 msgid "Penalty Waiver Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:425
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:424
 msgid "Penalty Waiver cannot be greater than overdue penalty interest"
 msgstr ""
 
@@ -4145,11 +4143,11 @@ msgstr ""
 msgid "Please add customer refund account in Loan Product"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:1766
+#: lending/loan_management/doctype/loan/loan.py:1777
 msgid "Please add partner FLGD Account for Loan Partner {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:1763
+#: lending/loan_management/doctype/loan/loan.py:1774
 msgid "Please add partner Payable Account for Loan Partner {0}"
 msgstr ""
 
@@ -4185,7 +4183,7 @@ msgstr ""
 msgid "Please select Loan Disbursement for Line of Credit repayment"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:159
+#: lending/loan_management/doctype/loan/loan.py:160
 #: lending/loan_management/doctype/loan_application/loan_application.py:153
 msgid "Please select Loan Product for company {0}"
 msgstr ""
@@ -4203,11 +4201,11 @@ msgid "Please set Additional Interest Income Account in Loan Product {0}"
 msgstr ""
 
 #: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:205
-#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:684
+#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:683
 msgid "Please set Broken Period Interest Recovery Account for the Loan Product {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2074
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2078
 msgid "Please set Customer Refund Account in Loan Product {0}"
 msgstr ""
 
@@ -4247,7 +4245,7 @@ msgstr ""
 msgid "Please set {0} Receivable Account in Loan Product {1}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2329
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2333
 msgid "Please set {0} in either Company or Loan Product"
 msgstr ""
 
@@ -4279,6 +4277,14 @@ msgstr ""
 
 #: lending/loan_management/report/loan_security_exposure/loan_security_exposure.py:80
 msgid "Pledged Applicant Count"
+msgstr ""
+
+#: lending/loan_management/doctype/loan_security_release/pledged_security_summary.html:5
+msgid "Pledged Qty"
+msgstr ""
+
+#: lending/loan_management/doctype/loan_security_release/loan_security_release.js:29
+msgid "Pledged Security Summary"
 msgstr ""
 
 #. Label of the post_haircut_amount (Currency) field in DocType 'Pledge'
@@ -4449,7 +4455,9 @@ msgstr ""
 
 #. Option for the 'Loan Repayment Type' (Select) field in DocType 'Loan
 #. Adjustment Detail'
+#. Option for the 'Repayment Type' (Select) field in DocType 'Loan Repayment'
 #: lending/loan_management/doctype/loan_adjustment_detail/loan_adjustment_detail.json
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.json
 msgid "Principal Capitalization"
 msgstr ""
 
@@ -4548,7 +4556,7 @@ msgid "Provision Rate"
 msgstr ""
 
 #: lending/loan_management/doctype/loan_application/loan_application.py:205
-#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:108
+#: lending/loan_management/doctype/loan_security_assignment/loan_security_assignment.py:83
 msgid "Qty is mandatory for loan security!"
 msgstr ""
 
@@ -4927,7 +4935,7 @@ msgstr ""
 msgid "Repayment Start Date"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:387
+#: lending/loan_management/doctype/loan_disbursement/loan_disbursement.py:386
 msgid "Repayment Start Date cannot be before Disbursement Date"
 msgstr ""
 
@@ -4944,7 +4952,7 @@ msgstr ""
 msgid "Repayment cannot be made for closed loan"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:229
+#: lending/loan_management/doctype/loan/loan.py:230
 msgid "Repayment periods is mandatory for term loans"
 msgstr ""
 
@@ -4992,11 +5000,11 @@ msgstr ""
 msgid "Restructure Date"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:127
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:126
 msgid "Restructure Date cannot be before last due date {0}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:197
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:196
 msgid "Restructure Date {0} cannot be after Repayment Start Date {1}"
 msgstr ""
 
@@ -5019,7 +5027,7 @@ msgstr ""
 msgid "Restructured"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2138
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2142
 msgid "Round Off Account is mandatory"
 msgstr ""
 
@@ -5063,7 +5071,7 @@ msgstr ""
 msgid "Sanctioned Amount Limit"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:368
+#: lending/loan_management/doctype/loan/loan.py:369
 #: lending/loan_management/doctype/loan_application/loan_application.py:196
 msgid "Sanctioned Amount limit crossed for {0} {1}"
 msgstr ""
@@ -5124,7 +5132,7 @@ msgstr ""
 msgid "Select whether the repayment date should be the end of the current month or start of the upcoming month"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:166
+#: lending/loan_management/doctype/loan/loan.py:167
 #: lending/loan_management/doctype/loan_application/loan_application.py:160
 msgid "Selected employee belongs to {0}. Please select an employee from company {1}."
 msgstr ""
@@ -5352,11 +5360,11 @@ msgstr ""
 msgid "The amount paid cannot be greater than the payable amount for Security Deposit Adjustment repayments."
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3141
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3145
 msgid "The following disbursements do not exist or are not submitted: {}"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3127
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:3131
 msgid "The following loans do not exist: {}"
 msgstr ""
 
@@ -5579,7 +5587,7 @@ msgstr ""
 msgid "Unaccrued Interest Waiver"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:430
+#: lending/loan_management/doctype/loan_restructure/loan_restructure.py:429
 msgid "Unaccrued Interest Waiver cannot be greater than overdue amount"
 msgstr ""
 
@@ -5737,7 +5745,7 @@ msgstr ""
 msgid "Waiver Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2289
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2293
 msgid "Waiver account not set for charge {0} in Loan Product {1}"
 msgstr ""
 
@@ -5806,7 +5814,7 @@ msgstr ""
 msgid "Write Off Recovery Account"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2091
+#: lending/loan_management/doctype/loan_repayment/loan_repayment.py:2095
 msgid "Write Off Recovery Account is mandatory"
 msgstr ""
 
@@ -5815,7 +5823,7 @@ msgstr ""
 msgid "Write Off Settlement"
 msgstr ""
 
-#: lending/loan_management/doctype/loan/loan.py:710
+#: lending/loan_management/doctype/loan/loan.py:711
 msgid "Write Off amount cannot be greater than pending loan amount"
 msgstr ""
 
