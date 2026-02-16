@@ -327,7 +327,7 @@ def update_repayment_schedule_demand_generated(
 	loan_disbursement=None,
 	from_date=None,
 	to_date=None,
-	demand_generated=1,
+	demand_generated=0,
 ):
 	LRS = frappe.qb.DocType("Loan Repayment Schedule")
 	RS = frappe.qb.DocType("Repayment Schedule")
