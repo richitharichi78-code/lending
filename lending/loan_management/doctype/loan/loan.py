@@ -38,7 +38,10 @@ from lending.loan_management.doctype.loan_limit_change_log.loan_limit_change_log
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
-from lending.loan_management.utils import loan_accounting_enabled
+from lending.loan_management.utils import (
+	loan_accounting_enabled,
+	update_repayment_schedule_demand_generated,
+)
 from lending.utils import daterange
 
 
@@ -133,7 +136,6 @@ class Loan(LoanController):
 		if frappe.flags.in_import:
 			if not self.get("is_imported"):
 				self.is_imported = 1
-			self.validate_import_mandatory_fields()
 
 		self.set_status()
 		self.set_loan_amount()
@@ -242,58 +244,6 @@ class Loan(LoanController):
 					_("Flat Interest Rate loans can only have monthly and yearly repayment frequency")
 				)
 
-	def validate_import_mandatory_fields(self):
-		migration_date = self.get_migration_date_for_import()
-		if not migration_date:
-			if self.get("is_imported") and self.get("migration_date") and self.get("status") == "Closed":
-				frappe.db.set_value("Loan", self.name, "status", "Closed")
-			return
-
-		details = self.get("loan_import_details") or []
-		if not details and migration_date:
-			frappe.throw(
-				_(
-					"Migration Date is set, so Loan Import Details is required to create disbursements, demands, and accruals."
-				)
-			)
-
-		is_loc = self.is_line_of_credit_loan()
-
-		meta = frappe.get_meta("Loan Import Details")
-
-		def label(fieldname):
-			df = meta.get_field(fieldname)
-			return df.label if df and df.label else fieldname
-
-		for idx, d in enumerate(details, start=1):
-			missing_labels = []
-
-			for f in ["loan_disbursement_id", "disbursement_date", "disbursed_amount"]:
-				if d.get(f) in (None, ""):
-					missing_labels.append(label(f))
-
-			if is_loc:
-				for f in ["repayment_method", "repayment_frequency", "repayment_periods", "repayment_start_date"]:
-					if d.get(f) in (None, ""):
-						missing_labels.append(label(f))
-
-			for f in [
-				"opening_principal_outstanding",
-				"opening_interest_outstanding",
-				"opening_penalty_outstanding",
-				"opening_additional_outstanding",
-				"opening_charge_outstanding",
-			]:
-				if d.get(f) in (None, ""):
-					missing_labels.append(label(f))
-
-			if missing_labels:
-				frappe.throw(
-					_(
-						"Migration Date is set, so these fields are required in Loan Import Details (Row #{0}): {1}"
-					).format(idx, ", ".join([frappe.bold(x) for x in missing_labels]))
-				)
-
 	def get_migration_date_for_import(self):
 		if not self.get("is_imported"):
 			return None
@@ -352,7 +302,12 @@ class Loan(LoanController):
 				is_loc,
 			)
 
-			update_demand_generated_for_repayment_schedule(self.name, disb_name, migration_date)
+			update_repayment_schedule_demand_generated(
+				loan=self.name,
+				loan_disbursement=disb_name,
+				to_date=migration_date,
+				demand_generated=1,
+			)
 
 			self.create_migrated_interest_accruals(
 				disb_name,
@@ -2286,28 +2241,3 @@ def get_dashboard_info(loan):
 	loan_info["currency"] = frappe.get_cached_value("Company", loan.company, "default_currency")
 
 	return loan_info
-
-def update_demand_generated_for_repayment_schedule(loan_name, disbursement_name, migration_date):
-	parents = frappe.db.get_all(
-		"Loan Repayment Schedule",
-		filters={
-			"loan": loan_name,
-			"loan_disbursement": disbursement_name,
-			"docstatus": 1,
-			"status": "Active",
-		},
-		pluck="name",
-	)
-
-	if not parents:
-		return
-
-	frappe.db.sql(
-		"""
-		UPDATE `tabRepayment Schedule`
-		SET demand_generated = 1
-		WHERE parent IN %(parents)s
-		  AND payment_date < %(migration_date)s
-		""",
-		{"parents": tuple(parents), "migration_date": migration_date},
-	)

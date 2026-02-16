@@ -741,13 +741,14 @@
    "fieldname": "loan_import_details",
    "fieldtype": "Table",
    "label": "Loan Import Details",
+   "mandatory_depends_on": "eval:(doc.is_imported && doc.status !== \"Closed\")",
    "options": "Loan Import Details"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-28 17:25:58.081306",
+ "modified": "2026-02-16 12:19:33.688799",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",
