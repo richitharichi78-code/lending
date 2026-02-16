@@ -27,7 +27,7 @@ class LoanSecurityAssignment(Document):
 		from lending.loan_management.doctype.pledge.pledge import Pledge
 
 		amended_from: DF.Link | None
-		applicant: DF.DynamicLink
+		applicant: DF.Data
 		applicant_type: DF.Literal["Employee", "Member", "Customer"]
 		company: DF.Link
 		description: DF.Text | None
@@ -38,21 +38,12 @@ class LoanSecurityAssignment(Document):
 		reference_no: DF.Data | None
 		release_time: DF.Datetime | None
 		securities: DF.Table[Pledge]
-		status: DF.Literal[
-			"Pledge Requested",
-			"Unpledged",
-			"Pledged",
-			"Release Requested",
-			"Released",
-			"Repossessed",
-			"Cancelled",
-		]
+		status: DF.Literal["Pledge Requested", "Unpledged", "Pledged", "Release Requested", "Released", "Repossessed", "Cancelled"]
 		total_security_value: DF.Currency
 	# end: auto-generated types
 
 	def validate(self):
 		self.validate_securities()
-		self.validate_loan_security_type()
 		self.set_loan_and_security_values()
 
 	def on_submit(self):
@@ -71,38 +62,17 @@ class LoanSecurityAssignment(Document):
 		update_loan(self.loan, self.maximum_loan_value, cancel=1)
 
 	def validate_securities(self):
+		if not self.get("securities"):
+			frappe.throw(_("Atlest one security needs to be assigned"))
+
 		security_list = []
-		for security in self.securities:
+		for security in self.get("securities"):
 			if security.loan_security not in security_list:
 				security_list.append(security.loan_security)
 			else:
 				frappe.throw(
 					_("Loan Security {0} added multiple times").format(frappe.bold(security.loan_security))
 				)
-
-	def validate_loan_security_type(self):
-		existing_lsa = None
-		if self.loan:
-			existing_lsa = frappe.db.get_value(
-				"Loan Security Assignment", {"loan": self.loan, "docstatus": 1}, ["name"]
-			)
-
-		if existing_lsa:
-			loan_security_type = frappe.db.get_value(
-				"Pledge", {"parent": existing_lsa}, ["loan_security_type"]
-			)
-		else:
-			loan_security_type = self.securities[0].loan_security_type
-
-		ltv_ratio_map = frappe._dict(
-			frappe.get_all("Loan Security Type", fields=["name", "loan_to_value_ratio"], as_list=1)
-		)
-
-		ltv_ratio = ltv_ratio_map.get(loan_security_type)
-
-		for security in self.securities:
-			if ltv_ratio_map.get(security.loan_security_type) != ltv_ratio:
-				frappe.throw(_("Loan Securities with different LTV ratio cannot be pledged against one loan"))
 
 	def set_loan_and_security_values(self):
 		total_security_value = 0
@@ -122,8 +92,13 @@ class LoanSecurityAssignment(Document):
 						_("No valid Loan Security Price found for {0}").format(frappe.bold(pledge.loan_security))
 					)
 
+			haircut = pledge.haircut
+
+			if not haircut:
+				haircut = flt(frappe.db.get_value("Loan Security Type", pledge.loan_security_type, "haircut"))
+
 			pledge.amount = pledge.qty * pledge.loan_security_price
-			pledge.post_haircut_amount = cint(pledge.amount - (pledge.amount * pledge.haircut / 100))
+			pledge.post_haircut_amount = cint(pledge.amount - (pledge.amount * haircut / 100))
 
 			total_security_value += pledge.amount
 			maximum_loan_value += pledge.post_haircut_amount

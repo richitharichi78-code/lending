@@ -16,8 +16,12 @@
   "applicant_type",
   "loan_product",
   "bulk_repayment_log",
+<<<<<<< feat-loan-import-tool-test1
   "is_imported",
   "loan_repayment_id",
+=======
+  "full_settlement_job",
+>>>>>>> develop
   "column_break_3",
   "company",
   "posting_date",
@@ -94,7 +98,6 @@
    "default": "Now",
    "fieldname": "posting_date",
    "fieldtype": "Datetime",
-   "in_list_view": 1,
    "label": "Posting Date",
    "reqd": 1
   },
@@ -370,7 +373,7 @@
    "in_list_view": 1,
    "in_standard_filter": 1,
    "label": "Repayment Type",
-   "options": "Normal Repayment\nInterest Waiver\nPenalty Waiver\nCharges Waiver\nPrincipal Adjustment\nInterest Carry Forward\nWrite Off Recovery\nSecurity Deposit Adjustment\nAdvance Payment\nPre Payment\nSubsidy Adjustments\nLoan Closure\nPartial Settlement\nFull Settlement\nWrite Off Settlement\nCharge Payment\nPenalty Capitalization\nInterest Capitalization\nCharges Capitalization",
+   "options": "Normal Repayment\nInterest Waiver\nPenalty Waiver\nCharges Waiver\nPrincipal Adjustment\nInterest Carry Forward\nWrite Off Recovery\nSecurity Deposit Adjustment\nAdvance Payment\nPre Payment\nSubsidy Adjustments\nLoan Closure\nPartial Settlement\nFull Settlement\nWrite Off Settlement\nCharge Payment\nPenalty Capitalization\nInterest Capitalization\nCharges Capitalization\nPrincipal Capitalization",
    "reqd": 1
   },
   {
@@ -545,6 +548,7 @@
   {
    "fieldname": "value_date",
    "fieldtype": "Datetime",
+   "in_list_view": 1,
    "label": "Value Date",
    "reqd": 1
   },
@@ -555,6 +559,7 @@
    "options": "Bulk Repayment Log"
   },
   {
+<<<<<<< feat-loan-import-tool-test1
    "default": "0",
    "fieldname": "is_imported",
    "fieldtype": "Check",
@@ -566,13 +571,22 @@
    "fieldname": "loan_repayment_id",
    "fieldtype": "Data",
    "label": "Loan Repayment ID",
+=======
+   "fieldname": "full_settlement_job",
+   "fieldtype": "Data",
+   "label": "Full Settlement Job ",
+>>>>>>> develop
    "read_only": 1
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
+<<<<<<< feat-loan-import-tool-test1
  "modified": "2026-01-28 15:19:52.690499",
+=======
+ "modified": "2026-02-06 15:41:39.868624",
+>>>>>>> develop
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Repayment",
