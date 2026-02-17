@@ -248,38 +248,24 @@ class Loan(LoanController):
 		if not self.get("is_imported"):
 			return None
 
-		migration_date = self.get("migration_date")
-		if not migration_date:
-			return None
+		if not self.get("migration_date"):
+			frappe.throw(_("Migration Date is mandatory for imported loans"))
 
-		if self.get("status") == "Closed":
-			return None
-
-		return migration_date
+		return self.get("migration_date")
 
 	def is_line_of_credit_loan(self):
 		if self.get("repayment_schedule_type"):
 			return self.repayment_schedule_type == "Line of Credit"
 
-		return (
-			frappe.db.get_value("Loan Product", self.loan_product, "repayment_schedule_type")
-			== "Line of Credit"
-		)
-
 	def process_migrated_loan_after_submit(self):
 		migration_date = self.get_migration_date_for_import()
-		if not migration_date:
+		if not migration_date or self.get("status") == "Closed":
 			return
 
 		precision = cint(frappe.db.get_default("currency_precision")) or 2
-		migration_date = self.migration_date
 		is_loc = self.is_line_of_credit_loan()
 
-		for d in (self.get("loan_import_details") or []):
-			loan_disbursement_id = d.loan_disbursement_id
-			disbursed_amount = flt(d.disbursed_amount, precision)
-			disbursement_date = d.disbursement_date
-
+		for d in (self.get("loan_import_details")):
 			if is_loc:
 				repayment_method = d.repayment_method
 				repayment_frequency = d.repayment_frequency
@@ -292,9 +278,9 @@ class Loan(LoanController):
 				repayment_start_date = self.get("repayment_start_date")
 
 			disb_name = self.import_loan_disbursement(
-				loan_disbursement_id,
-				disbursement_date,
-				disbursed_amount,
+				d.loan_disbursement_id,
+				d.disbursement_date,
+				flt(d.disbursed_amount, precision),
 				repayment_method,
 				repayment_frequency,
 				tenure,
@@ -330,18 +316,6 @@ class Loan(LoanController):
 				if flt(amount, precision) <= 0:
 					continue
 
-				if frappe.db.exists(
-					"Loan Demand",
-					{
-						"loan": self.name,
-						"loan_disbursement": disb_name,
-						"posting_date": migration_date,
-						"demand_type": demand_type,
-						"demand_subtype": demand_subtype,
-					},
-				):
-					continue
-
 				create_loan_demand(
 					loan=self.name,
 					demand_date=migration_date,
@@ -365,39 +339,21 @@ class Loan(LoanController):
 		repayment_start_date,
 		is_loc,
 	):
-		existing = frappe.db.get_value(
-			"Loan Disbursement",
-			{"against_loan": self.name, "name": loan_disbursement_id, "is_imported": 1},
-			"name",
-		)
-		if existing:
-			return existing
-
-		disbursement_date = disbursement_date
-		posting_date = self.get("posting_date") or disbursement_date
-
 		data = {
 			"doctype": "Loan Disbursement",
 			"against_loan": self.name,
 			"company": self.company,
 			"loan_disbursement_id": loan_disbursement_id,
 			"disbursement_date": disbursement_date,
-			"posting_date": posting_date,
+			"posting_date": self.get("posting_date") or disbursement_date,
 			"disbursed_amount": disbursed_amount,
 			"is_imported": 1,
+			"repayment_schedule_type": self.get("repayment_schedule_type"),
+			"repayment_method": repayment_method,
+			"repayment_frequency": repayment_frequency,
+			"tenure": tenure,
+			"repayment_start_date": repayment_start_date,
 		}
-
-		if self.get("repayment_schedule_type"):
-			data["repayment_schedule_type"] = self.repayment_schedule_type
-
-		if repayment_method:
-			data["repayment_method"] = repayment_method
-		if repayment_frequency:
-			data["repayment_frequency"] = repayment_frequency
-		if tenure:
-			data["tenure"] = tenure
-		if repayment_start_date:
-			data["repayment_start_date"] = repayment_start_date
 
 		doc = frappe.get_doc(data)
 		doc.insert(ignore_permissions=True)
@@ -415,18 +371,11 @@ class Loan(LoanController):
 	):
 		precision = cint(frappe.db.get_default("currency_precision")) or 2
 
-		if frappe.db.exists(
-			"Loan Interest Accrual",
-			{"loan": self.name, "loan_disbursement": disbursement_name, "posting_date": migration_date, "is_imported": 1},
-		):
-			return
-
-		principal_outstanding = flt(principal_outstanding or 0, precision)
-		interest_outstanding = flt(interest_outstanding or 0, precision)
-		penalty_outstanding = flt(penalty_outstanding or 0, precision)
-		additional_outstanding = flt(additional_outstanding or 0, precision)
-
-		rate_of_interest = flt(self.get("rate_of_interest") or 0, precision)
+		principal_outstanding = flt(principal_outstanding, precision)
+		interest_outstanding = flt(interest_outstanding, precision)
+		penalty_outstanding = flt(penalty_outstanding, precision)
+		additional_outstanding = flt(additional_outstanding, precision)
+		rate_of_interest = flt(self.get("rate_of_interest"), precision)
 
 		if flt(interest_outstanding, precision) > 0:
 			make_loan_interest_accrual_entry(
@@ -747,30 +696,24 @@ class Loan(LoanController):
 		return self.get("posting_date") or getdate()
 
 	def get_opening_accounts_from_loan_product(self):
-		if not self.loan_product:
-			frappe.throw(_("Loan Product is mandatory to create opening GL entries."))
-
-		acc = frappe.db.get_value(
+		accounts = frappe.db.get_value(
 			"Loan Product",
 			self.loan_product,
 			["loan_account", "payment_account"],
 			as_dict=True,
 		) or {}
 
-		loan_account = acc.get("loan_account")
-		payment_account = acc.get("payment_account")
-
-		if not loan_account:
+		if not accounts.get("loan_account"):
 			frappe.throw(
 				_("Please set Loan Account for the Loan Product {0}").format(frappe.bold(self.loan_product))
 			)
 
-		if not payment_account:
+		if not accounts.get("payment_account"):
 			frappe.throw(
 				_("Please set Payment Account for the Loan Product {0}").format(frappe.bold(self.loan_product))
 			)
 
-		return loan_account, payment_account
+		return accounts.get("loan_account"), accounts.get("payment_account")
 
 	def add_opening_gl_entry(
 		self,

@@ -503,7 +503,7 @@ def create_loan_demand(
 	paid_amount=0,
 	posting_date=None,
 	loan_repayment=None,
-	is_imported=False
+	is_imported=False,
 	is_partial_pre_paid_interest=0,
 ):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
