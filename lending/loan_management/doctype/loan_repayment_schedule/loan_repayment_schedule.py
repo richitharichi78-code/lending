@@ -166,6 +166,7 @@ class LoanRepaymentSchedule(Document):
 		principal_balance = prepayment_details.balance_principal
 		paid_interest_amount = interest_amount
 		paid_principal_amount = principal_amount
+		is_partial_pre_paid_interest = 0
 
 		if (
 			prepayment_details.adjusted_unaccrued_interest
@@ -173,6 +174,7 @@ class LoanRepaymentSchedule(Document):
 		):
 			interest_amount = prepayment_details.adjusted_unaccrued_interest
 			paid_interest_amount = interest_amount
+			is_partial_pre_paid_interest = 1
 
 		if flt(interest_amount) > 0:
 			create_loan_demand(
@@ -187,6 +189,7 @@ class LoanRepaymentSchedule(Document):
 				if self.restructure_type == "Advance Payment"
 				else None,
 				paid_amount=paid_interest_amount,
+				is_partial_pre_paid_interest=is_partial_pre_paid_interest,
 			)
 
 		create_loan_demand(
@@ -530,7 +533,7 @@ class LoanRepaymentSchedule(Document):
 			# All the residue amount is added to the last row for "Repay Over Number of Periods"
 			#
 			# Also, when such a Repayment Schedule is rescheduled, its repayment_method changes to Repay Fixed Amount per Period
-			# Here, the tenure shouldn't change. Thus, if this is a restructed repayment schedule, the last row is all the residue amount left.
+			# Here, the tenure shouldn't change. Thus, if this is a restructured repayment schedule, the last row is all the residue amount left.
 			# This is a special case.
 
 			if (
@@ -647,7 +650,7 @@ class LoanRepaymentSchedule(Document):
 			tenure = self.repayment_periods
 
 		if (
-			self.restructure_type != "Normal Restructure"
+			self.restructure_type not in ("Normal Restructure", "Advance Payment")
 			and self.repayment_frequency == "Monthly"
 			or (self.restructure_type == "Pre Payment" and self.repayment_frequency != "One Time")
 		):
