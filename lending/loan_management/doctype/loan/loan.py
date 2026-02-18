@@ -254,8 +254,7 @@ class Loan(LoanController):
 		return self.get("migration_date")
 
 	def is_line_of_credit_loan(self):
-		if self.get("repayment_schedule_type"):
-			return self.repayment_schedule_type == "Line of Credit"
+		return self.get("repayment_schedule_type") == "Line of Credit"
 
 	def process_migrated_loan_after_submit(self):
 		migration_date = self.get_migration_date_for_import()
