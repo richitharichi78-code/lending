@@ -49,6 +49,7 @@ class LoanRestructure(AccountsController):
 		disbursed_amount: DF.Currency
 		interest_overdue: DF.Currency
 		interest_waiver_amount: DF.Currency
+		is_npa: DF.Check
 		loan: DF.Link
 		loan_disbursement: DF.Link | None
 		loan_product: DF.Link | None
@@ -57,9 +58,7 @@ class LoanRestructure(AccountsController):
 		new_loan_amount: DF.Currency
 		new_monthly_repayment_amount: DF.Currency
 		new_rate_of_interest: DF.Percent
-		new_repayment_method: DF.Literal[
-			"", "Repay Fixed Amount per Period", "Repay Over Number of Periods"
-		]
+		new_repayment_method: DF.Literal["", "Repay Fixed Amount per Period", "Repay Over Number of Periods"]
 		new_repayment_period_in_months: DF.Int
 		old_emi: DF.Currency
 		old_loan_amount: DF.Currency
@@ -274,10 +273,11 @@ class LoanRestructure(AccountsController):
 			if self.unaccrued_interest and self.restructure_type == "Normal Restructure":
 				make_accrual_interest_entry_for_loans(posting_date=self.restructure_date, loan=self.loan)
 
+				self.make_waiver_and_capitalization_for_interest()
 				self.make_waiver_and_capitalization_for_penalty()
+				self.make_waiver_and_capitalization_for_charges()
+				self.set_principal_adjustment_on_restructure()
 				self.make_loan_repayment_for_adjustment()
-				self.make_loan_repayment_for_waiver()
-				self.make_loan_adjustment_for_capitalization()
 
 			self.restructure_loan()
 
@@ -448,17 +448,17 @@ class LoanRestructure(AccountsController):
 	def restructure_loan(self):
 		if self.restructure_type == "Normal Restructure":
 			# Mark Loan as NPA
-			update_all_linked_loan_customer_npa_status(
-				1, self.applicant_type, self.applicant, self.restructure_date, loan=self.loan
-			)
-
-			watch_period_days = frappe.db.get_value(
-				"Company", self.company, "watch_period_post_loan_restructure_in_days"
-			)
-			watch_period_end_date = add_days(self.restructure_date, watch_period_days)
-			update_watch_period_date_for_all_loans(
-				watch_period_end_date, self.applicant_type, self.applicant
-			)
+			if self.is_npa:
+				update_all_linked_loan_customer_npa_status(
+					1, self.applicant_type, self.applicant, self.restructure_date, loan=self.loan
+				)
+				watch_period_days = frappe.db.get_value(
+					"Company", self.company, "watch_period_post_loan_restructure_in_days"
+				)
+				watch_period_end_date = add_days(self.restructure_date, watch_period_days)
+				update_watch_period_date_for_all_loans(
+					watch_period_end_date, self.applicant_type, self.applicant
+				)
 
 			frappe.db.set_value("Loan", self.loan, "days_past_due", 0)
 			status = "Restructured"
@@ -573,46 +573,17 @@ class LoanRestructure(AccountsController):
 			},
 		)
 
-	def make_waiver_and_capitalization_for_penalty(self):
-		if self.penal_interest_waiver:
-			create_loan_repayment(
-				self.loan,
-				self.restructure_date,
-				"Penalty Waiver",
-				self.penal_interest_waiver,
-				restructure_name=self.name,
-			)
-
-		if self.balance_penalty_amount and self.treatment_of_penal_interest == "Capitalize":
-			create_loan_repayment(
-				self.loan,
-				self.restructure_date,
-				"Penalty Capitalization",
-				self.balance_penalty_amount,
-				restructure_name=self.name,
-			)
-
-	def make_loan_repayment_for_adjustment(self):
-		if self.principal_adjusted:
-			create_loan_repayment(
-				self.loan,
-				self.restructure_date,
-				"Principal Adjustment",
-				self.principal_adjusted,
-				restructure_name=self.name,
-			)
-
-		if self.adjusted_interest_amount:
-			create_loan_repayment(
-				self.loan,
-				self.restructure_date,
-				"Interest Adjustment",
-				self.adjusted_interest_amount,
-				restructure_name=self.name,
-			)
-
-	def make_loan_repayment_for_waiver(self):
+	def make_waiver_and_capitalization_for_interest(self):
 		from lending.loan_management.doctype.loan_demand.loan_demand import create_loan_demand
+
+		if self.balance_interest_amount and self.treatment_of_normal_interest == "Capitalize":
+			create_loan_repayment(
+				self.loan,
+				self.restructure_date,
+				"Interest Capitalization",
+				self.balance_interest_amount,
+				restructure_name=self.name,
+			)
 
 		if self.interest_waiver_amount:
 			create_loan_repayment(
@@ -620,6 +591,15 @@ class LoanRestructure(AccountsController):
 				self.restructure_date,
 				"Interest Waiver",
 				self.interest_waiver_amount,
+				restructure_name=self.name,
+			)
+
+		if self.balance_unaccrued_interest and self.unaccrued_interest_treatment == "Capitalize":
+			create_loan_repayment(
+				self.loan,
+				self.restructure_date,
+				"Interest Capitalization",
+				self.balance_unaccrued_interest,
 				restructure_name=self.name,
 			)
 
@@ -640,6 +620,35 @@ class LoanRestructure(AccountsController):
 				restructure_name=self.name,
 			)
 
+	def make_waiver_and_capitalization_for_penalty(self):
+		if self.penal_interest_waiver:
+			create_loan_repayment(
+				self.loan,
+				self.restructure_date,
+				"Penalty Waiver",
+				self.penal_interest_waiver,
+				restructure_name=self.name,
+			)
+
+		if self.balance_penalty_amount and self.treatment_of_penal_interest == "Capitalize":
+			create_loan_repayment(
+				self.loan,
+				self.restructure_date,
+				"Penalty Capitalization",
+				self.balance_penalty_amount,
+				restructure_name=self.name,
+			)
+
+	def make_waiver_and_capitalization_for_charges(self):
+		if self.balance_charges and self.treatment_of_other_charges == "Capitalize":
+			create_loan_repayment(
+				self.loan,
+				self.restructure_date,
+				"Charges Capitalization",
+				self.balance_charges,
+				restructure_name=self.name,
+			)
+
 		if self.other_charges_waiver:
 			create_loan_repayment(
 				self.loan,
@@ -649,38 +658,33 @@ class LoanRestructure(AccountsController):
 				restructure_name=self.name,
 			)
 
+	def set_principal_adjustment_on_restructure(self):
+		if flt(self.principal_overdue) > 0 and flt(self.principal_adjusted) == 0:
+			self.principal_adjusted = flt(self.principal_overdue)
+
+	def make_loan_repayment_for_adjustment(self):
+		if self.principal_adjusted:
+			create_loan_repayment(
+				self.loan,
+				self.restructure_date,
+				"Principal Capitalization",
+				self.principal_adjusted,
+				restructure_name=self.name,
+			)
+
+		if self.adjusted_interest_amount:
+			create_loan_repayment(
+				self.loan,
+				self.restructure_date,
+				"Interest Adjustment",
+				self.adjusted_interest_amount,
+				restructure_name=self.name,
+			)
+
 	def cancel_loan_adjustments(self):
 		for d in frappe.get_all("Loan Repayment", {"loan_restructure": self.name}):
 			doc = frappe.get_doc("Loan Repayment", d.name)
 			doc.cancel()
-
-	def make_loan_adjustment_for_capitalization(self):
-		if self.balance_interest_amount and self.treatment_of_normal_interest == "Capitalize":
-			create_loan_repayment(
-				self.loan,
-				self.restructure_date,
-				"Interest Capitalization",
-				self.balance_interest_amount,
-				restructure_name=self.name,
-			)
-
-		if self.balance_unaccrued_interest and self.unaccrued_interest_treatment == "Capitalize":
-			create_loan_repayment(
-				self.loan,
-				self.restructure_date,
-				"Interest Capitalization",
-				self.balance_unaccrued_interest,
-				restructure_name=self.name,
-			)
-
-		if self.balance_charges and self.treatment_of_other_charges == "Capitalize":
-			create_loan_repayment(
-				self.loan,
-				self.restructure_date,
-				"Charges Capitalization",
-				self.balance_charges,
-				restructure_name=self.name,
-			)
 
 
 def create_loan_repayment(

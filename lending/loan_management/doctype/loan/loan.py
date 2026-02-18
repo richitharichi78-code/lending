@@ -3,6 +3,7 @@
 
 
 import json
+from datetime import date, datetime
 
 import frappe
 from frappe import _
@@ -859,15 +860,15 @@ def make_refund_jv(loan, amount=0, reference_number=None, reference_date=None, s
 
 @frappe.whitelist()
 def update_days_past_due_in_loans(
-	loan_name,
-	posting_date=None,
-	loan_product=None,
-	process_loan_classification=None,
-	loan_disbursement=None,
-	ignore_freeze=False,
-	is_backdated=0,
-	force_update_dpd_in_loan=0,
-):
+	loan_name: str,
+	posting_date: str | date | datetime | None = None,
+	loan_product: str | None = None,
+	process_loan_classification: str | None = None,
+	loan_disbursement: str | None = None,
+	ignore_freeze: bool = False,
+	is_backdated: bool = False,
+	force_update_dpd_in_loan: bool = False,
+) -> None:
 	from lending.loan_management.doctype.loan_repayment.loan_repayment import get_unpaid_demands
 
 	"""Update days past due in loans"""
@@ -924,13 +925,14 @@ def update_days_past_due_in_loans(
 		threshold_write_off_map = get_dpd_threshold_write_off_map()
 
 		loan_details = frappe.db.get_value(
-			"Loan", loan_name, ["applicant_type", "applicant", "freeze_date", "company"], as_dict=1
+			"Loan", loan_name, ["applicant_type", "applicant", "freeze_date", "company", "watch_period_end_date"], as_dict=1
 		)
 
 		applicant_type = loan_details.get("applicant_type")
 		applicant = loan_details.get("applicant")
 		company = loan_details.get("company")
 		freeze_date = loan_details.get("freeze_date")
+		existing_watch_period_end_date = loan_details.get("watch_period_end_date")
 
 		if not ignore_freeze and freeze_date and getdate(freeze_date) < getdate(posting_date):
 			return
@@ -966,6 +968,35 @@ def update_days_past_due_in_loans(
 					loan_disbursement=disbursement,
 					is_backdated=is_backdated,
 					dpd_threshold=threshold,
+				)
+
+			watch_period_days = frappe.db.get_value(
+				"Company", company, "watch_period_post_loan_restructure_in_days"
+			)
+
+			restructure_exists = frappe.db.exists(
+				"Loan Restructure",
+				{
+					"loan": loan_name,
+					"status": "Approved",
+					"docstatus": 1,
+					"company": company,
+					"restructure_type": "Normal Restructure",
+				},
+			)
+
+			watch_period_start_date = (
+				demand.demand_date
+				if existing_watch_period_end_date and days_past_due == 1
+				else getdate(posting_date)
+				if is_npa and not existing_watch_period_end_date and restructure_exists
+				else None
+			)
+
+			if watch_period_start_date:
+				watch_period_end_date = add_days(watch_period_start_date, watch_period_days)
+				update_watch_period_date_for_all_loans(
+					watch_period_end_date, applicant_type, applicant
 				)
 
 			create_dpd_record(
@@ -1116,7 +1147,7 @@ def create_dpd_record(
 		{"loan": loan, "posting_date": posting_date, "loan_disbursement": loan_disbursement},
 	)
 	if existing_log:
-		doc = frappe.get_doc("Days Past Due Log", existing_log)
+		doc = frappe.get_doc("Days Past Due Log", existing_log, for_update=True)
 	else:
 		doc = frappe.new_doc("Days Past Due Log")
 

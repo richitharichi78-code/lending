@@ -60,6 +60,7 @@ from lending.tests.test_utils import (
 	create_repayment_entry,
 	create_secured_demand_loan,
 	get_loan_interest_accrual,
+	loan_classification_ranges,
 	make_loan_disbursement_entry,
 	set_loan_accrual_frequency,
 	set_loan_settings_in_company,
@@ -72,6 +73,7 @@ class TestLoan(IntegrationTestCase):
 		set_loan_settings_in_company()
 		create_loan_accounts()
 		setup_loan_demand_offset_order()
+		loan_classification_ranges()
 
 		set_loan_accrual_frequency("Monthly")
 		simple_terms_loans = [
@@ -1059,10 +1061,12 @@ class TestLoan(IntegrationTestCase):
 		lrs = frappe.get_doc(
 			"Loan Repayment Schedule", {"loan": loan.name, "docstatus": 1, "status": "Active"}
 		)
+
 		self.assertEqual(lrs.monthly_repayment_amount, 47523)
 		self.assertEqual(lrs.get("repayment_schedule")[3].total_payment, 47523)
 		self.assertEqual(lrs.broken_period_interest, 0)
 		self.assertEqual(lrs.broken_period_interest_days, 0)
+		self.assertEqual(lrs.repayment_periods, 12)
 
 	def test_multi_tranche_disbursement_accrual(self):
 		loan = create_loan(
