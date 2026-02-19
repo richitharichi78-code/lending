@@ -1235,7 +1235,7 @@ def update_days_past_due_in_loans(
 		applicant = loan_details.get("applicant")
 		company = loan_details.get("company")
 		freeze_date = loan_details.get("freeze_date")
-		watch_period_end_date = loan_details.get("watch_period_end_date")
+		existing_watch_period_end_date = loan_details.get("watch_period_end_date")
 
 		if not ignore_freeze and freeze_date and getdate(freeze_date) < getdate(posting_date):
 			return
@@ -1258,15 +1258,6 @@ def update_days_past_due_in_loans(
 				days_past_due = 0
 				is_npa = 0
 
-			if watch_period_end_date and days_past_due == 1:
-				watch_period_days = frappe.db.get_value(
-					"Company", company, "watch_period_post_loan_restructure_in_days"
-				)
-				watch_period_end_date = add_days(demand.demand_date, watch_period_days)
-				update_watch_period_date_for_all_loans(
-					watch_period_end_date, applicant_type, applicant
-				)
-
 			if posting_date == add_days(getdate(), -1) or force_update_dpd_in_loan:
 				update_loan_and_customer_status(
 					demand.loan,
@@ -1280,6 +1271,35 @@ def update_days_past_due_in_loans(
 					loan_disbursement=disbursement,
 					is_backdated=is_backdated,
 					dpd_threshold=threshold,
+				)
+
+			watch_period_days = frappe.db.get_value(
+				"Company", company, "watch_period_post_loan_restructure_in_days"
+			)
+
+			restructure_exists = frappe.db.exists(
+				"Loan Restructure",
+				{
+					"loan": loan_name,
+					"status": "Approved",
+					"docstatus": 1,
+					"company": company,
+					"restructure_type": "Normal Restructure",
+				},
+			)
+
+			watch_period_start_date = (
+				demand.demand_date
+				if existing_watch_period_end_date and days_past_due == 1
+				else getdate(posting_date)
+				if is_npa and not existing_watch_period_end_date and restructure_exists
+				else None
+			)
+
+			if watch_period_start_date:
+				watch_period_end_date = add_days(watch_period_start_date, watch_period_days)
+				update_watch_period_date_for_all_loans(
+					watch_period_end_date, applicant_type, applicant
 				)
 
 			create_dpd_record(
@@ -1464,20 +1484,24 @@ def update_loan_and_customer_status(
 		write_off_suspense_entries,
 	)
 
-	loan_status, repayment_schedule_type, loan_product, unmark_npa, current_npa = frappe.db.get_value(
-		"Loan", loan, ["status", "repayment_schedule_type", "loan_product", "unmark_npa", "is_npa"]
-	)
+	loan_details = frappe.db.get_value(
+		"Loan", loan, ["status", "repayment_schedule_type", "loan_product", "unmark_npa", "is_npa",
+			"watch_period_end_date", "classification_code", "classification_name"], as_dict=1)
 
-	if loan_status == "Written Off":
+	if loan_details.get("status") == "Written Off":
 		is_written_off = 1
 	else:
 		is_written_off = 0
 
-	classification_code, classification_name = get_classification_code_and_name(
-		days_past_due, company, is_written_off=is_written_off
-	)
+	if loan_details.get("watch_period_end_date") and getdate(loan_details.get("watch_period_end_date")) >= getdate(posting_date):
+		classification_code = loan_details.get("classification_code")
+		classification_name = loan_details.get("classification_name")
+	else:
+		classification_code, classification_name = get_classification_code_and_name(
+			days_past_due, company, is_written_off=is_written_off
+		)
 
-	if repayment_schedule_type == "Line of Credit":
+	if loan_details.get("repayment_schedule_type") == "Line of Credit":
 		if loan_disbursement:
 			frappe.db.set_value(
 				"Loan Disbursement",
@@ -1497,8 +1521,8 @@ def update_loan_and_customer_status(
 
 		days_past_due = max_dpd
 
-	if loan_status == "Settled":
-		write_off_suspense_entries(loan, loan_product, posting_date, posting_date, company)
+	if loan_details.get("status") == "Settled":
+		write_off_suspense_entries(loan, loan_details.get("loan_product"), posting_date, posting_date, company)
 		write_off_charges(loan, posting_date, posting_date, company)
 	elif is_backdated and days_past_due < dpd_threshold:
 		is_previous_npa = frappe.db.get_value(
@@ -1526,9 +1550,9 @@ def update_loan_and_customer_status(
 			update_all_linked_loan_customer_npa_status(
 				0, applicant_type, applicant, posting_date, loan, event="Loan Repayment"
 			)
-			write_off_suspense_entries(loan, loan_product, max_date, max_date, company)
+			write_off_suspense_entries(loan, loan_details.get("loan_product"), max_date, max_date, company)
 			write_off_charges(loan, max_date, max_date, company)
-		elif cint(is_previous_npa) and not cint(current_npa) and not cint(unmark_npa):
+		elif cint(is_previous_npa) and not cint(loan_details.get("current_npa")) and not cint(loan_details.get("unmark_npa")):
 			update_all_linked_loan_customer_npa_status(
 				1, applicant_type, applicant, posting_date, loan, event="Loan Repayment"
 			)
@@ -1536,7 +1560,7 @@ def update_loan_and_customer_status(
 			move_unpaid_interest_to_suspense_ledger(loan, max_date, max_date)
 			move_receivable_charges_to_suspense_ledger(loan, company, max_date, max_date)
 
-	elif is_npa and not cint(unmark_npa) and not cint(current_npa):
+	elif is_npa and not cint(loan_details.get("unmark_npa")) and not cint(loan_details.get("current_npa")):
 		for loan_id in get_all_active_loans_for_the_customer(applicant, applicant_type):
 			prev_npa = frappe.db.get_value("Loan", loan_id, "is_npa")
 			if not prev_npa:
