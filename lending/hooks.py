@@ -284,6 +284,6 @@ update_gl_dict_with_app_based_fields = ["lending.overrides.gl_entry.update_value
 workflow_methods = [
 	{
 		"name": "Convert to Loan Application",
-		"method": "lending.lending.doctype.loan_lead.loan_lead.convert_to_loan_application"
+		"method": "lending.loan_origination.doctype.loan_lead.loan_lead.convert_to_loan_application"
 	}
 ]

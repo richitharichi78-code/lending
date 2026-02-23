@@ -34,6 +34,7 @@ class LoanLead(Document):
 		mobile_number: DF.Phone
 		mobile_verification_status: DF.Literal["Pending", "Initiated", "Verified"]
 		pan: DF.Data | None
+		proposed_tenure: DF.Int
 		sms_otp: DF.Password | None
 		status: DF.Data | None
 	# end: auto-generated types
@@ -44,12 +45,13 @@ class LoanLead(Document):
 
 
 @frappe.whitelist()
-def convert_to_loan_application(loan_lead: str):
-	lead_doc = frappe.get_doc("Loan Lead", loan_lead)
+def convert_to_loan_application(loan_lead: Document):
 	loan_application = frappe.new_doc("Loan Application")
-	loan_application.applicant_email_address = lead_doc.email
-	loan_application.applicant_phone_number = lead_doc.mobile_number
-	loan_application.loan_product = lead_doc.loan_product
-	loan_application.loan_amount = lead_doc.loan_amount
+	loan_application.applicant_email_address = loan_lead.email
+	loan_application.applicant_name = loan_lead.applicant_name
+	loan_application.applicant_phone_number = loan_lead.mobile_number
+	loan_application.loan_product = loan_lead.loan_product
+	loan_application.loan_amount = loan_lead.loan_amount
+	loan_application.repayment_periods = loan_lead.proposed_tenure
 
 	loan_application.save()
