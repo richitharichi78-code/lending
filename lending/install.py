@@ -289,10 +289,22 @@ def make_property_setter_for_journal_entry():
 def after_install():
 	create_custom_fields(LOAN_CUSTOM_FIELDS, ignore_validate=True)
 	make_property_setter_for_journal_entry()
+	add_server_scripts()
 
 
 def before_uninstall():
 	delete_custom_fields(LOAN_CUSTOM_FIELDS)
+
+def add_server_scripts():
+	if not frappe.db.exists("Server Script", "Age validation for Loan Lead"):
+		age_check_script = frappe.new_doc("Server Script")
+		age_check_script.name = "Age validation for Loan Lead"
+		age_check_script.script_type = "Workflow Task"
+		age_check_script.script = """
+if doc.age < 18:
+	frappe.throw("Applicant should be at least 18 years old.")
+	"""
+		age_check_script.save(ignore_permissions=True)
 
 
 def delete_custom_fields(custom_fields):
