@@ -62,6 +62,7 @@ class LoanRepayment(LoanController):
 		full_settlement_job: DF.Data | None
 		interest_payable: DF.Currency
 		is_backdated: DF.Check
+		is_imported: DF.Check
 		is_npa: DF.Check
 		is_term_loan: DF.Check
 		is_write_off_waiver: DF.Check
@@ -74,6 +75,7 @@ class LoanRepayment(LoanController):
 		loan_partner_repayment_schedule_type: DF.Data | None
 		loan_partner_share_percentage: DF.Percent
 		loan_product: DF.Link | None
+		loan_repayment_id: DF.Data | None
 		loan_restructure: DF.Link | None
 		manual_remarks: DF.SmallText | None
 		mode_of_payment: DF.Link | None
@@ -109,6 +111,11 @@ class LoanRepayment(LoanController):
 		self.set_repayment_account()
 
 	def validate(self):
+		if frappe.flags.in_import:
+			self.is_imported = 1
+			self.check_import_total_amount()
+			return
+
 		charges = None
 		if self.get("payable_charges"):
 			if self.repayment_type == "Charge Payment":
@@ -144,6 +151,9 @@ class LoanRepayment(LoanController):
 		self.allocate_amounts(amounts)
 
 	def on_update(self):
+		if self.is_imported:
+			return
+
 		from lending.loan_management.doctype.loan_restructure.loan_restructure import (
 			create_update_loan_reschedule,
 		)
@@ -164,6 +174,10 @@ class LoanRepayment(LoanController):
 				)
 
 	def on_submit(self):
+		if self.is_imported:
+			self.update_paid_amounts()
+			return
+
 		from lending.loan_management.doctype.loan_demand.loan_demand import reverse_demands
 		from lending.loan_management.doctype.loan_disbursement.loan_disbursement import (
 			make_sales_invoice_for_charge,
@@ -373,6 +387,20 @@ class LoanRepayment(LoanController):
 		repost.cancel_future_accruals_and_demands = True
 		repost.cancel_future_emi_demands = True
 		repost.submit()
+
+	def check_import_total_amount(self):
+		precision = cint(frappe.db.get_default("currency_precision")) or 2
+
+		total_amount = flt(self.principal_amount_paid, precision) + flt(self.total_interest_paid, precision) + flt(
+			self.total_penalty_paid, precision
+		) + flt(self.total_charges_paid, precision) + flt(self.unbooked_interest_paid, precision) + flt(
+			self.unbooked_penalty_paid, precision
+		)
+
+		if flt(self.amount_paid, precision) != flt(total_amount, precision):
+			frappe.throw(
+				_("Amount Paid must equal the sum of Principal, Interest, Penalty, Charges, Unbooked Interest, and Unbooked Penalty.")
+			)
 
 	def post_suspense_entries(self, cancel=0):
 		from lending.loan_management.doctype.loan_write_off.loan_write_off import (
@@ -993,6 +1021,20 @@ class LoanRepayment(LoanController):
 
 		if flt(self.excess_amount) > 0:
 			query = query.set(loan.excess_amount_paid, loan.excess_amount_paid + self.excess_amount)
+
+		if self.is_imported:
+			if self.repayment_type == "Write Off Settlement":
+				if self.repayment_schedule_type != "Line of Credit":
+					query = query.set(loan.status, "Closed")
+					query = query.set(loan.closure_date, self.value_date)
+
+			elif self.repayment_type == "Full Settlement":
+				if self.repayment_schedule_type != "Line of Credit":
+					query = query.set(loan.status, "Settled")
+					query = query.set(loan.settlement_date, self.value_date)
+
+			query.run()
+			return
 
 		if self.repayment_type == "Write Off Settlement":
 			auto_write_off_amount = flt(

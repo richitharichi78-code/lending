@@ -102,6 +102,9 @@ class LoanRepaymentSchedule(Document):
 	# end: auto-generated types
 
 	def validate(self):
+		if self.docstatus == 0 and not self.status:
+			self.status = "Initiated"
+
 		self.number_of_rows = 0
 		self.set_repayment_period()
 		self.set_repayment_start_date()

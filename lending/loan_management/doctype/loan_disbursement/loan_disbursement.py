@@ -74,6 +74,7 @@ class LoanDisbursement(LoanController):
 		disbursed_amount: DF.Currency
 		disbursement_account: DF.Link | None
 		disbursement_date: DF.Date
+		is_imported: DF.Check
 		is_term_loan: DF.Check
 		loan_account: DF.Link | None
 		loan_disbursement_charges: DF.Table[LoanDisbursementCharge]
@@ -86,9 +87,7 @@ class LoanDisbursement(LoanController):
 		reference_date: DF.Date | None
 		reference_number: DF.Data | None
 		refund_account: DF.Link | None
-		repayment_frequency: DF.Literal[
-			"Monthly", "Daily", "Weekly", "Bi-Weekly", "Quarterly", "One Time"
-		]
+		repayment_frequency: DF.Literal["Monthly", "Daily", "Weekly", "Bi-Weekly", "Quarterly", "One Time"]
 		repayment_method: DF.Literal["", "Repay Over Number of Periods", "Repay Fixed Amount per Period"]
 		repayment_schedule_type: DF.Data | None
 		repayment_start_date: DF.Date | None
@@ -97,6 +96,11 @@ class LoanDisbursement(LoanController):
 		tenure: DF.Int
 		withhold_security_deposit: DF.Check
 	# end: auto-generated types
+
+	def autoname(self):
+		if self.is_imported and self.loan_disbursement_id:
+			self.name = self.loan_disbursement_id
+			return
 
 	def validate(self):
 		self.set_status()

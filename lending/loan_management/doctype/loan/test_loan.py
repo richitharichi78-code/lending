@@ -14,6 +14,7 @@ from frappe.utils import (
 	get_datetime,
 	getdate,
 	nowdate,
+	random_string,
 )
 
 from erpnext.selling.doctype.customer.test_customer import get_customer_dict
@@ -3558,3 +3559,67 @@ class TestLoan(IntegrationTestCase):
 				flt(expected_total, 2),
 				msg=f"Total amount mismatch at index {idx}",
 			)
+
+	def test_mid_tenure_migrated_loan_import(self):
+		disb_id = f"DISB-MID-{random_string(5).upper()}"
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			500000,
+			"Repay Over Number of Periods",
+			12,
+			applicant_type="Customer",
+			repayment_start_date="2024-02-15",
+			posting_date="2024-01-15",
+			rate_of_interest=12.5,
+			penalty_charges_rate=2,
+			repayment_frequency="Monthly",
+			migration_date="2024-06-15",
+			is_imported=1,
+			loan_import_details=[{
+				"disbursed_amount": 500000,
+				"disbursement_date": "2024-01-15",
+				"loan_disbursement_id": disb_id,
+				"opening_additional_outstanding": 1500,
+				"opening_charge_outstanding": 800,
+				"opening_interest_outstanding": 28500,
+				"opening_principal_outstanding": 375000,
+				"opening_penalty_outstanding": 3200,
+			}],
+		)
+
+		loan.submit()
+
+		loan.load_from_db()
+
+		self.assertTrue(frappe.db.exists("Loan", {"name": loan.name}))
+		self.assertTrue(frappe.db.exists("Loan Disbursement", {"against_loan": loan.name, "is_imported": 1}))
+		self.assertTrue(frappe.db.exists("Loan Interest Accrual", {"loan": loan.name, "is_imported": 1}))
+		self.assertTrue(frappe.db.exists("Loan Demand", {"loan": loan.name, "is_imported": 1}))
+
+	def test_closed_migrated_loan_import(self):
+		loan = create_loan(
+			"_Test Customer 1",
+			"Term Loan Product 4",
+			500000,
+			"Repay Over Number of Periods",
+			12,
+			applicant_type="Customer",
+			repayment_start_date="2024-02-15",
+			posting_date="2024-01-15",
+			rate_of_interest=10,
+			penalty_charges_rate=2,
+			repayment_frequency="Monthly",
+			migration_date="2025-10-31",
+			is_imported=1,
+			status="Closed",
+		)
+
+		loan.submit()
+
+		loan.load_from_db()
+
+		self.assertTrue(frappe.db.exists("Loan", {"name": loan.name}))
+		self.assertFalse(frappe.db.exists("Loan Disbursement", {"against_loan": loan.name, "is_imported": 1}))
+		self.assertFalse(frappe.db.exists("Loan Interest Accrual", {"loan": loan.name, "is_imported": 1}))
+		self.assertFalse(frappe.db.exists("Loan Demand", {"loan": loan.name, "is_imported": 1}))

@@ -17,6 +17,8 @@
   "company",
   "posting_date",
   "status",
+  "is_imported",
+  "migration_date",
   "section_break_8",
   "loan_product",
   "loan_amount",
@@ -94,6 +96,8 @@
   "column_break_yskw",
   "refund_amount",
   "excess_amount_paid",
+  "loan_import_details_tab",
+  "loan_import_details",
   "connections_tab"
  ],
  "fields": [
@@ -165,6 +169,7 @@
    "fieldtype": "Select",
    "in_standard_filter": 1,
    "label": "Status",
+   "mandatory_depends_on": "is_imported",
    "no_copy": 1,
    "options": "\nDraft\nSanctioned\nPartially Disbursed\nDisbursed\nActive\nLoan Closure Requested\nClosed\nWritten Off\nSettled",
    "read_only": 1,
@@ -704,6 +709,13 @@
    "fieldtype": "Column Break"
   },
   {
+   "default": "0",
+   "fieldname": "is_imported",
+   "fieldtype": "Check",
+   "label": "Is Imported",
+   "read_only": 1
+  },
+  {
    "fieldname": "moratorium_details_section",
    "fieldtype": "Section Break",
    "label": "Moratorium Details"
@@ -711,12 +723,32 @@
   {
    "fieldname": "column_break_nzzj",
    "fieldtype": "Column Break"
+  },
+  {
+   "depends_on": "is_imported",
+   "fieldname": "migration_date",
+   "fieldtype": "Date",
+   "label": "Migration Date",
+   "read_only": 1
+  },
+  {
+   "depends_on": "is_imported",
+   "fieldname": "loan_import_details_tab",
+   "fieldtype": "Tab Break",
+   "label": "Loan Import Details"
+  },
+  {
+   "fieldname": "loan_import_details",
+   "fieldtype": "Table",
+   "label": "Loan Import Details",
+   "mandatory_depends_on": "eval:(doc.is_imported && doc.status !== \"Closed\")",
+   "options": "Loan Import Details"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-01 16:04:23.630804",
+ "modified": "2026-02-16 12:19:33.688799",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

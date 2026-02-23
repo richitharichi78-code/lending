@@ -36,9 +36,7 @@ class LoanInterestAccrual(LoanController):
 		from frappe.types import DF
 
 		accrual_date: DF.Date | None
-		accrual_type: DF.Literal[
-			"Regular", "Repayment", "Disbursement", "Credit Adjustment", "Debit Adjustment", "Refund"
-		]
+		accrual_type: DF.Literal["Regular", "Repayment", "Disbursement", "Credit Adjustment", "Debit Adjustment", "Refund"]
 		additional_interest_amount: DF.Currency
 		additional_interest_suspense_entry: DF.Link | None
 		amended_from: DF.Link | None
@@ -49,6 +47,7 @@ class LoanInterestAccrual(LoanController):
 		cost_center: DF.Link | None
 		interest_amount: DF.Currency
 		interest_type: DF.Literal["Normal Interest", "Penal Interest"]
+		is_imported: DF.Check
 		is_npa: DF.Check
 		is_term_loan: DF.Check
 		last_accrual_date: DF.Date | None
@@ -511,6 +510,7 @@ def make_loan_interest_accrual_entry(
 	accrual_date=None,
 	loan_repayment_schedule_detail=None,
 	loan_disbursement=None,
+	is_imported=False,
 ):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
 	if flt(interest_amount, precision) > 0:
@@ -530,6 +530,7 @@ def make_loan_interest_accrual_entry(
 		loan_interest_accrual.accrual_date = accrual_date
 		loan_interest_accrual.loan_repayment_schedule_detail = loan_repayment_schedule_detail
 		loan_interest_accrual.loan_disbursement = loan_disbursement
+		loan_interest_accrual.is_imported = is_imported
 
 		loan_interest_accrual.save()
 		loan_interest_accrual.submit()

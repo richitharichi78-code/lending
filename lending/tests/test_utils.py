@@ -651,6 +651,10 @@ def create_loan(
 	moratorium_type=None,
 	penalty_charges_rate=None,
 	repayment_frequency=None,
+	is_imported=False,
+	migration_date=None,
+	status=None,
+	loan_import_details=None,
 ):
 
 	loan = frappe.get_doc(
@@ -675,8 +679,14 @@ def create_loan(
 			"moratorium_type": moratorium_type,
 			"penalty_charges_rate": penalty_charges_rate,
 			"repayment_frequency": repayment_frequency or "Monthly",
+			"is_imported": is_imported,
+			"migration_date": migration_date,
+			"status": status
 		}
 	)
+
+	if loan_import_details:
+		loan.set("loan_import_details", loan_import_details)
 
 	loan.save()
 	return loan

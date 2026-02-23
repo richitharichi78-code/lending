@@ -11,6 +11,7 @@ from lending.loan_management.doctype.loan_repayment.loan_repayment import (
 	calculate_amounts,
 	get_pending_principal_amount,
 )
+from lending.loan_management.utils import update_repayment_schedule_demand_generated
 
 
 class LoanRepaymentRepost(Document):
@@ -247,17 +248,10 @@ class LoanRepaymentRepost(Document):
 			frappe.db.set_value("Loan", self.loan, "status", "Disbursed")
 
 		if self.cancel_future_emi_demands:
-			active_schedule = frappe.db.get_value(
-				"Loan Repayment Schedule", {"loan": self.loan, "status": "Active", "docstatus": 1}, "name"
-			)
-
-			frappe.db.sql(
-				"""
-				UPDATE `tabRepayment Schedule`
-				SET demand_generated = 0
-				WHERE parent = %s AND payment_date >= %s
-			""",
-				(active_schedule, self.repost_date),
+			update_repayment_schedule_demand_generated(
+				loan=self.loan,
+				from_date=self.repost_date,
+				demand_generated=0,
 			)
 
 		for entry in reversed(self.get("repayment_entries", [])):
