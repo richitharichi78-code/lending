@@ -6,7 +6,9 @@
  "engine": "InnoDB",
  "field_order": [
   "section_break_hmca",
+  "applicant_type",
   "applicant_name",
+  "email",
   "pan",
   "amended_from",
   "employment_type",
@@ -16,10 +18,10 @@
   "column_break_nnmy",
   "date_of_birth",
   "loan_product",
-  "loan_amount",
   "mobile_number",
-  "email",
+  "loan_amount",
   "status",
+  "age",
   "address_links_section",
   "address",
   "column_break_muqd",
@@ -60,6 +62,7 @@
    "label": "PAN"
   },
   {
+   "depends_on": "eval:doc.applicant_type == \"Individual\"",
    "fieldname": "employment_type",
    "fieldtype": "Select",
    "label": "Employment Type",
@@ -71,6 +74,7 @@
    "label": "Lead Source"
   },
   {
+   "depends_on": "eval:doc.applicant_type == \"Business\"",
    "fieldname": "company_name",
    "fieldtype": "Data",
    "label": "Company Name"
@@ -80,11 +84,11 @@
    "fieldtype": "Column Break"
   },
   {
+   "depends_on": "eval:doc.applicant_type == \"Individual\"",
    "fieldname": "date_of_birth",
    "fieldtype": "Date",
-   "in_list_view": 1,
    "label": "Date Of Birth",
-   "reqd": 1
+   "mandatory_depends_on": "eval:doc.applicant_type == \"Individual\""
   },
   {
    "fieldname": "loan_product",
@@ -110,7 +114,8 @@
   {
    "fieldname": "status",
    "fieldtype": "Data",
-   "label": "Status"
+   "label": "Status",
+   "read_only": 1
   },
   {
    "fieldname": "address_links_section",
@@ -137,7 +142,8 @@
    "fieldname": "email",
    "fieldtype": "Data",
    "label": "Email",
-   "options": "Email"
+   "options": "Email",
+   "reqd": 1
   },
   {
    "fieldname": "authentication_details_section",
@@ -175,16 +181,30 @@
    "read_only": 1
   },
   {
+   "depends_on": "eval:doc.applicant_type == \"Individual\"",
    "fieldname": "income",
    "fieldtype": "Currency",
    "label": "Income"
+  },
+  {
+   "fieldname": "applicant_type",
+   "fieldtype": "Select",
+   "label": "Applicant Type",
+   "options": "Individual\nBusiness",
+   "reqd": 1
+  },
+  {
+   "fieldname": "age",
+   "fieldtype": "Int",
+   "hidden": 1,
+   "label": "Age"
   }
  ],
  "grid_page_length": 50,
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-05 18:19:53.343194",
+ "modified": "2026-02-20 16:25:38.078845",
  "modified_by": "Administrator",
  "module": "Loan Origination",
  "name": "Loan Lead",
