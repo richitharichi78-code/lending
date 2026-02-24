@@ -624,11 +624,9 @@ def create_loan_application(
 	if do_not_save:
 		return loan_application
 
-	loan_application.save()
-	loan_application.submit()
-
 	loan_application.status = "Approved"
 	loan_application.save()
+	loan_application.submit()
 
 	return loan_application.name
 
