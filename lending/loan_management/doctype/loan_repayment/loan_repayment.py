@@ -649,7 +649,7 @@ class LoanRepayment(LoanController):
 					amount=demand.paid_amount,
 					loan_repayment=self.name,
 					waiver_account=waiver_account,
-					posting_date=self.posting_date,
+					posting_date=getdate(self.posting_date),
 					value_date=self.value_date,
 				)
 
@@ -2685,6 +2685,7 @@ def process_amount_for_loan(
 ):
 	from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
 		calculate_accrual_amount_for_loans,
+		calculate_penal_interest_for_loans,
 	)
 
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
@@ -2732,6 +2733,16 @@ def process_amount_for_loan(
 		amounts["unaccrued_interest"] = calculate_accrual_amount_for_loans(
 			loan,
 			posting_date=(posting_date if payment_type == "Loan Closure" else add_days(posting_date, -1))
+			if not freeze_date
+			else freeze_date,
+			accrual_type="Regular",
+			is_future_accrual=1,
+			loan_disbursement=loan_disbursement,
+		)
+
+		amounts["unbooked_penalty"] = calculate_penal_interest_for_loans(
+			loan,
+			posting_date=add_days(posting_date, -1)
 			if not freeze_date
 			else freeze_date,
 			accrual_type="Regular",

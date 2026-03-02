@@ -399,7 +399,7 @@ class LoanRepaymentSchedule(Document):
 			monthly_repayment_amount = get_flat_monthly_repayment_amount(
 				balance_amount, rate_of_interest, self.repayment_periods, self.repayment_frequency
 			)
-		if not self.restructure_type and self.repayment_method != "Repay Fixed Amount per Period":
+		elif not self.restructure_type and self.repayment_method != "Repay Fixed Amount per Period":
 			monthly_repayment_amount = get_monthly_repayment_amount(
 				balance_amount, rate_of_interest, self.repayment_periods, self.repayment_frequency
 			)
@@ -552,6 +552,9 @@ class LoanRepaymentSchedule(Document):
 			additional_days = 0
 			additional_principal_amount = 0
 			pending_prev_days = 0
+
+		if schedule_field == "colender_schedule":
+			return
 
 		if schedule_field == "repayment_schedule" and not self.restructure_type:
 			if self.repayment_frequency == "One Time":
@@ -706,14 +709,12 @@ class LoanRepaymentSchedule(Document):
 				):
 					for row in prev_schedule.get(schedule_field):
 						if getdate(row.payment_date) < getdate(self.posting_date) or (
-							getdate(row.payment_date) == getdate(self.posting_date) and self.restructure_type
-						):
-
-							if getdate(row.payment_date) == getdate(self.posting_date) and self.restructure_type in (
+							getdate(row.payment_date) == getdate(self.posting_date) and self.restructure_type in (
 								"Pre Payment",
 								"Advance Payment",
-							):
-								row.balance_loan_amount = self.current_principal_amount
+							)
+						):
+							row.balance_loan_amount = self.current_principal_amount
 
 							self.add_repayment_schedule_row(
 								row.payment_date,
@@ -1001,8 +1002,12 @@ class LoanRepaymentSchedule(Document):
 					)
 					additional_days = 0
 			elif self.repayment_schedule_type == "Flat Interest Rate":
-				days = 1
-				months = self.repayment_periods
+				if self.repayment_frequency == "Yearly":
+					days = 1
+					months = 1
+				elif self.repayment_frequency == "Monthly":
+					days = 1
+					months = 12
 			elif expected_payment_date == payment_date:
 				if self.repayment_schedule_type == "Pro-rated calendar months":
 					if payment_date == self.repayment_start_date:
