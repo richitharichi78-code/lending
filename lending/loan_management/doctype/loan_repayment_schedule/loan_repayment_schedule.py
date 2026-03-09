@@ -1088,6 +1088,7 @@ class LoanRepaymentSchedule(Document):
 				payment_date,
 				0,
 				interest_amount,
+				0,
 				interest_amount,
 				balance_amount,
 				additional_days,
