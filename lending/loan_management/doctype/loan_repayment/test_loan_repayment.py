@@ -1815,3 +1815,45 @@ class TestLoanRepayment(IntegrationTestCase):
 
 		loan.load_from_db()
 		self.assertEqual(loan.status, "Closed")
+
+	def test_add_charges_api(self):
+		from lending.api import apply_charge
+
+		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 0)
+
+		posting_date = "2024-01-05"
+		repayment_start_date = "2024-01-05"
+
+		loan = create_loan(
+			self.applicant2,
+			"Term Loan Product 4",
+			10000,
+			"Repay Over Number of Periods",
+			6,
+			applicant_type="Customer",
+			repayment_start_date=repayment_start_date,
+			posting_date=posting_date,
+			rate_of_interest=12,
+			penalty_charges_rate=25,
+		)
+		loan.submit()
+
+		make_loan_disbursement_entry(
+			loan.name,
+			loan.loan_amount,
+			disbursement_date=posting_date,
+			repayment_start_date=repayment_start_date,
+		)
+
+		apply_charge(
+			loan=loan.name,
+			charge_type="Processing Fee",
+			based_on="On Outstanding Principal",
+			percentage=2,
+			charge_applicable_date=posting_date
+		)
+
+		payable_charge = calculate_amounts(against_loan=loan.name, posting_date=posting_date)["total_charges_payable"]
+		self.assertEqual(payable_charge, 200)
+
+		frappe.db.set_value("Company", "_Test Company", "enable_loan_accounting", 0)
