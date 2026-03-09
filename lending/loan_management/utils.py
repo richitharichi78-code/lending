@@ -356,3 +356,14 @@ def update_repayment_schedule_demand_generated(
 		query = query.where(RS.payment_date < to_date)
 
 	query.run()
+
+def create_charge_master(charge_type):
+	if not frappe.db.exists("Item", charge_type):
+		frappe.get_doc(
+			{
+				"doctype": "Item",
+				"item_code": charge_type,
+				"item_group": "Services",
+				"is_stock_item": 0,
+			}
+		).insert()
