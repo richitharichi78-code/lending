@@ -66,6 +66,7 @@ class Loan(LoanController):
 		applicant: DF.DynamicLink
 		applicant_name: DF.Data | None
 		applicant_type: DF.Literal["Customer", "Employee"]
+		auto_create_disbursement_on_loan_booking: DF.Check
 		available_limit_amount: DF.Currency
 		cancellation_date: DF.Date | None
 		classification_code: DF.Link | None
@@ -419,6 +420,9 @@ class Loan(LoanController):
 
 		if self.is_imported:
 			self.make_gl_entries()
+
+		if self.auto_create_disbursement_on_loan_booking:
+			make_loan_disbursement(self.name, submit=True, posting_date=self.posting_date, disbursement_date=self.disbursement_date)
 
 	def on_cancel(self):
 		self.cancel_and_delete_repayment_schedule()
@@ -936,7 +940,7 @@ def make_loan_disbursement(
 	loan,
 	disbursement_amount=0,
 	as_dict=0,
-	submit=0,
+	submit=False,
 	repayment_start_date=None,
 	repayment_frequency=None,
 	posting_date=None,
@@ -953,10 +957,10 @@ def make_loan_disbursement(
 	disbursement_entry.disbursement_date = posting_date or nowdate()
 	disbursement_entry.posting_date = disbursement_date or nowdate()
 	disbursement_entry.bank_account = bank_account
-	disbursement_entry.repayment_start_date = repayment_start_date
-	disbursement_entry.repayment_frequency = repayment_frequency
-	disbursement_entry.disbursed_amount = disbursement_amount
-	disbursement_entry.is_term_loan = is_term_loan
+	disbursement_entry.repayment_start_date = repayment_start_date or loan_doc.repayment_start_date
+	disbursement_entry.repayment_frequency = repayment_frequency or loan_doc.repayment_frequency
+	disbursement_entry.disbursed_amount = disbursement_amount or loan_doc.loan_amount
+	disbursement_entry.is_term_loan = is_term_loan or loan_doc.is_term_loan
 	disbursement_entry.repayment_schedule_type = loan_doc.repayment_schedule_type
 
 	if loan_doc.repayment_schedule_type != "Line of Credit":
@@ -965,7 +969,12 @@ def make_loan_disbursement(
 	for charge in loan_doc.get("loan_charges"):
 		disbursement_entry.append(
 			"loan_disbursement_charges",
-			{"charge": charge.charge, "amount": charge.amount, "account": charge.account},
+			{
+				"charge": charge.charge,
+				"amount": charge.amount,
+				"account": charge.account,
+				"treatment_of_charge": charge.treatment_of_charge,
+			},
 		)
 
 	if submit:
