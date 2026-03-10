@@ -19,6 +19,7 @@
   "status",
   "is_imported",
   "migration_date",
+  "auto_create_disbursement_on_loan_booking",
   "section_break_8",
   "loan_product",
   "loan_amount",
@@ -521,7 +522,7 @@
    "collapsible": 1,
    "fieldname": "loan_charges_section",
    "fieldtype": "Section Break",
-   "label": "Loan Charges"
+   "label": "Loan Booking Charges"
   },
   {
    "depends_on": "eval:doc.moratorium_tenure && doc.moratorium_type == \"EMI\"",
@@ -743,12 +744,18 @@
    "label": "Loan Import Details",
    "mandatory_depends_on": "eval:(doc.is_imported && doc.status !== \"Closed\")",
    "options": "Loan Import Details"
+  },
+  {
+   "default": "0",
+   "fieldname": "auto_create_disbursement_on_loan_booking",
+   "fieldtype": "Check",
+   "label": "Auto create disbursement on loan booking"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-16 12:19:33.688799",
+ "modified": "2026-03-09 14:19:18.157852",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan",

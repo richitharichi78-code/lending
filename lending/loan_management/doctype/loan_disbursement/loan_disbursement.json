@@ -46,6 +46,7 @@
   "cost_center",
   "charges_section",
   "loan_disbursement_charges",
+  "total_emi_charges",
   "disbursement_references_section",
   "reference_date",
   "days_past_due",
@@ -385,12 +386,17 @@
    "fieldtype": "Check",
    "label": "Is Imported",
    "read_only": 1
+  },
+  {
+   "fieldname": "total_emi_charges",
+   "fieldtype": "Currency",
+   "label": "Total EMI Charges"
   }
  ],
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-01-28 15:18:44.619467",
+ "modified": "2026-03-09 15:50:09.247885",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Disbursement",

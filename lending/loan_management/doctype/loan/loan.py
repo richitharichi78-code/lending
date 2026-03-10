@@ -66,6 +66,7 @@ class Loan(LoanController):
 		applicant: DF.DynamicLink
 		applicant_name: DF.Data | None
 		applicant_type: DF.Literal["Customer", "Employee"]
+		auto_create_disbursement_on_loan_booking: DF.Check
 		available_limit_amount: DF.Currency
 		cancellation_date: DF.Date | None
 		classification_code: DF.Link | None
@@ -419,6 +420,9 @@ class Loan(LoanController):
 
 		if self.is_imported:
 			self.make_gl_entries()
+
+		if self.auto_create_disbursement_on_loan_booking:
+			make_loan_disbursement(self.name, submit=True, posting_date=self.posting_date, disbursement_date=self.disbursement_date)
 
 	def on_cancel(self):
 		self.cancel_and_delete_repayment_schedule()
@@ -937,16 +941,16 @@ def close_unsecured_term_loan(loan: str):
 
 @frappe.whitelist()
 def make_loan_disbursement(
-	loan,
-	disbursement_amount=0,
-	as_dict=0,
-	submit=0,
-	repayment_start_date=None,
-	repayment_frequency=None,
-	posting_date=None,
-	disbursement_date=None,
-	bank_account=None,
-	is_term_loan=None,
+	loan: str,
+	disbursement_amount: int | None = 0,
+	as_dict: int | None = 0,
+	submit: bool | None = False,
+	repayment_start_date: str | None = None,
+	repayment_frequency: str | None = None,
+	posting_date: str | None = None,
+	disbursement_date: str | None = None,
+	bank_account: str | None = None,
+	is_term_loan: int | None = None,
 ):
 	loan_doc = frappe.get_doc("Loan", loan)
 	disbursement_entry = frappe.new_doc("Loan Disbursement")
@@ -957,10 +961,10 @@ def make_loan_disbursement(
 	disbursement_entry.disbursement_date = posting_date or nowdate()
 	disbursement_entry.posting_date = disbursement_date or nowdate()
 	disbursement_entry.bank_account = bank_account
-	disbursement_entry.repayment_start_date = repayment_start_date
-	disbursement_entry.repayment_frequency = repayment_frequency
-	disbursement_entry.disbursed_amount = disbursement_amount
-	disbursement_entry.is_term_loan = is_term_loan
+	disbursement_entry.repayment_start_date = repayment_start_date or loan_doc.repayment_start_date
+	disbursement_entry.repayment_frequency = repayment_frequency or loan_doc.repayment_frequency
+	disbursement_entry.disbursed_amount = disbursement_amount or loan_doc.loan_amount
+	disbursement_entry.is_term_loan = is_term_loan or loan_doc.is_term_loan
 	disbursement_entry.repayment_schedule_type = loan_doc.repayment_schedule_type
 
 	if loan_doc.repayment_schedule_type != "Line of Credit":
@@ -969,7 +973,12 @@ def make_loan_disbursement(
 	for charge in loan_doc.get("loan_charges"):
 		disbursement_entry.append(
 			"loan_disbursement_charges",
-			{"charge": charge.charge, "amount": charge.amount, "account": charge.account},
+			{
+				"charge": charge.charge,
+				"amount": charge.amount,
+				"account": charge.account,
+				"treatment_of_charge": charge.treatment_of_charge,
+			},
 		)
 
 	if submit:
@@ -1041,20 +1050,20 @@ def make_loan_write_off(loan, company=None, posting_date=None, amount=0, as_dict
 
 @frappe.whitelist()
 def unpledge_security(
-	loan=None,
-	loan_security_assignment=None,
-	security_map=None,
-	as_dict=0,
-	save=0,
-	submit=0,
-	approve=0,
+	loan: str | None = None,
+	loan_security_assignment: str | None = None,
+	security_map: dict| None = None,
+	as_dict: int = 0,
+	save: int = 0,
+	submit: int = 0,
+	approve: int = 0,
 ):
 	# if no security_map is passed it will be considered as full unpledge
 	if security_map and isinstance(security_map, str):
 		security_map = json.loads(security_map)
 
 	if loan:
-		pledge_qty_map = security_map or get_pledged_security_qty(loan)
+		pledge_qty_map = security_map or get_pledged_security_qty(loan=loan)
 		loan_doc = frappe.get_doc("Loan", loan)
 		unpledge_request = create_loan_security_release(
 			pledge_qty_map, loan_doc.name, loan_doc.company, loan_doc.applicant_type, loan_doc.applicant
