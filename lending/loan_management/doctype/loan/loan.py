@@ -66,6 +66,7 @@ class Loan(LoanController):
 		applicant: DF.DynamicLink
 		applicant_name: DF.Data | None
 		applicant_type: DF.Literal["Customer", "Employee"]
+		auto_create_disbursement_on_loan_booking: DF.Check
 		available_limit_amount: DF.Currency
 		cancellation_date: DF.Date | None
 		classification_code: DF.Link | None
@@ -419,6 +420,9 @@ class Loan(LoanController):
 
 		if self.is_imported:
 			self.make_gl_entries()
+
+		if self.auto_create_disbursement_on_loan_booking:
+			make_loan_disbursement(self.name, submit=True, posting_date=self.posting_date, disbursement_date=self.disbursement_date)
 
 	def on_cancel(self):
 		self.cancel_and_delete_repayment_schedule()
@@ -858,8 +862,10 @@ def get_sanctioned_amount_limit(applicant_type, applicant, company):
 
 
 @frappe.whitelist()
-def request_loan_closure(loan, posting_date=None, auto_close=0):
+def request_loan_closure(loan: str, posting_date: str | None = None, auto_close: int = 0):
 	from lending.loan_management.doctype.loan_repayment.loan_repayment import calculate_amounts
+
+	frappe.has_permission("Loan", "write", throw=True)
 
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
 	if not posting_date:
@@ -916,7 +922,9 @@ def get_loan_application(loan_application):
 
 
 @frappe.whitelist()
-def close_unsecured_term_loan(loan):
+def close_unsecured_term_loan(loan: str):
+	frappe.has_permission("Loan", "write", throw=True)
+
 	loan_details = frappe.db.get_value(
 		"Loan", {"name": loan}, ["status", "is_term_loan", "is_secured_loan"], as_dict=1
 	)
@@ -933,16 +941,16 @@ def close_unsecured_term_loan(loan):
 
 @frappe.whitelist()
 def make_loan_disbursement(
-	loan,
-	disbursement_amount=0,
-	as_dict=0,
-	submit=0,
-	repayment_start_date=None,
-	repayment_frequency=None,
-	posting_date=None,
-	disbursement_date=None,
-	bank_account=None,
-	is_term_loan=None,
+	loan: str,
+	disbursement_amount: int | None = 0,
+	as_dict: int | None = 0,
+	submit: bool | None = False,
+	repayment_start_date: str | None = None,
+	repayment_frequency: str | None = None,
+	posting_date: str | None = None,
+	disbursement_date: str | None = None,
+	bank_account: str | None = None,
+	is_term_loan: int | None = None,
 ):
 	loan_doc = frappe.get_doc("Loan", loan)
 	disbursement_entry = frappe.new_doc("Loan Disbursement")
@@ -953,10 +961,10 @@ def make_loan_disbursement(
 	disbursement_entry.disbursement_date = posting_date or nowdate()
 	disbursement_entry.posting_date = disbursement_date or nowdate()
 	disbursement_entry.bank_account = bank_account
-	disbursement_entry.repayment_start_date = repayment_start_date
-	disbursement_entry.repayment_frequency = repayment_frequency
-	disbursement_entry.disbursed_amount = disbursement_amount
-	disbursement_entry.is_term_loan = is_term_loan
+	disbursement_entry.repayment_start_date = repayment_start_date or loan_doc.repayment_start_date
+	disbursement_entry.repayment_frequency = repayment_frequency or loan_doc.repayment_frequency
+	disbursement_entry.disbursed_amount = disbursement_amount or loan_doc.loan_amount
+	disbursement_entry.is_term_loan = is_term_loan or loan_doc.is_term_loan
 	disbursement_entry.repayment_schedule_type = loan_doc.repayment_schedule_type
 
 	if loan_doc.repayment_schedule_type != "Line of Credit":
@@ -965,7 +973,12 @@ def make_loan_disbursement(
 	for charge in loan_doc.get("loan_charges"):
 		disbursement_entry.append(
 			"loan_disbursement_charges",
-			{"charge": charge.charge, "amount": charge.amount, "account": charge.account},
+			{
+				"charge": charge.charge,
+				"amount": charge.amount,
+				"account": charge.account,
+				"treatment_of_charge": charge.treatment_of_charge,
+			},
 		)
 
 	if submit:
@@ -998,8 +1011,10 @@ def make_repayment_entry(
 
 
 @frappe.whitelist()
-def make_loan_write_off(loan, company=None, posting_date=None, amount=0, as_dict=0):
+def make_loan_write_off(loan: str, company: str | None = None, posting_date: str | None = None, amount: float = 0, as_dict: int = 0):
 	from lending.loan_management.doctype.loan_repayment.loan_repayment import calculate_amounts
+
+	frappe.has_permission("Loan Write Off", "write", throw=True)
 
 	if not company:
 		company = frappe.get_value("Loan", loan, "company")
@@ -1110,7 +1125,9 @@ def get_shortfall_applicants():
 
 
 @frappe.whitelist()
-def make_refund_jv(loan, amount=0, reference_number=None, reference_date=None, submit=0):
+def make_refund_jv(loan: str, amount: float = 0, reference_number: str | None = None, reference_date: str | None = None, submit: int = 0):
+	frappe.has_permission("Journal Entry", "write", throw=True)
+
 	loan_details = frappe.db.get_value(
 		"Loan",
 		loan,
@@ -1173,6 +1190,8 @@ def update_days_past_due_in_loans(
 	force_update_dpd_in_loan: bool = False,
 ) -> None:
 	from lending.loan_management.doctype.loan_repayment.loan_repayment import get_unpaid_demands
+
+	frappe.has_permission("Loan", "write", throw=True)
 
 	"""Update days past due in loans"""
 	posting_date = posting_date or getdate()
