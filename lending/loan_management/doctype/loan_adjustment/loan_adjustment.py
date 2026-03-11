@@ -85,8 +85,9 @@ class LoanAdjustment(Document):
 		if shortfall > auto_write_off_amount:
 			frappe.throw(
 				_(
-					"Total net payable is {0} and total adjustment is {1}. "
-					"Shortfall {2} exceeds the allowed write-off limit of {3} as per the Loan Product Auto Write Off Amount."
+					"Total net payable amount is {0} and total adjustment amount is {1}. "
+					"For Manual or Internal Foreclosure, shortfall {2} exceeds the allowed write-off "
+					"limit of {3} as per the Loan Product Auto Write Off Amount."
 				).format(total_net_payable, adjustment_amount, shortfall, auto_write_off_amount)
 			)
 
