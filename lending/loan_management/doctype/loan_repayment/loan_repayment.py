@@ -264,7 +264,7 @@ class LoanRepayment(LoanController):
 			update_installment_counts(self.against_loan, loan_disbursement=self.loan_disbursement)
 
 		if self.repayment_type == "Full Settlement":
-			if not frappe.flags.in_test:
+			if frappe.flags.in_test:
 				job_name = frappe.enqueue(self.post_write_off_settlements, enqueue_after_commit=True)
 				self.db_set("full_settlement_job", job_name)
 			else:
