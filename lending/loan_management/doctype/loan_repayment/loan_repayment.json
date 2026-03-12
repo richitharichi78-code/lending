@@ -1,5 +1,6 @@
 {
  "actions": [],
+ "allow_import": 1,
  "autoname": "LM-REP-.####",
  "creation": "2022-01-25 10:30:02.767941",
  "doctype": "DocType",
@@ -15,6 +16,7 @@
   "applicant_type",
   "loan_product",
   "bulk_repayment_log",
+  "is_imported",
   "full_settlement_job",
   "column_break_3",
   "company",
@@ -553,9 +555,16 @@
    "options": "Bulk Repayment Log"
   },
   {
+   "default": "0",
+   "fieldname": "is_imported",
+   "fieldtype": "Check",
+   "label": "Is Imported",
+   "read_only": 1
+  },
+  {
    "fieldname": "full_settlement_job",
    "fieldtype": "Data",
-   "label": "Full Settlement Job ",
+   "label": "Full Settlement Job",
    "read_only": 1
   }
  ],

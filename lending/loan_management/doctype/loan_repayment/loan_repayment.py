@@ -62,6 +62,7 @@ class LoanRepayment(LoanController):
 		full_settlement_job: DF.Data | None
 		interest_payable: DF.Currency
 		is_backdated: DF.Check
+		is_imported: DF.Check
 		is_npa: DF.Check
 		is_term_loan: DF.Check
 		is_write_off_waiver: DF.Check
@@ -74,6 +75,7 @@ class LoanRepayment(LoanController):
 		loan_partner_repayment_schedule_type: DF.Data | None
 		loan_partner_share_percentage: DF.Percent
 		loan_product: DF.Link | None
+		loan_repayment_id: DF.Data | None
 		loan_restructure: DF.Link | None
 		manual_remarks: DF.SmallText | None
 		mode_of_payment: DF.Link | None
@@ -109,6 +111,11 @@ class LoanRepayment(LoanController):
 		self.set_repayment_account()
 
 	def validate(self):
+		if frappe.flags.in_import:
+			self.is_imported = 1
+			self.check_import_total_amount()
+			return
+
 		charges = None
 		if self.get("payable_charges"):
 			if self.repayment_type == "Charge Payment":
@@ -144,6 +151,9 @@ class LoanRepayment(LoanController):
 		self.allocate_amounts(amounts)
 
 	def on_update(self):
+		if self.is_imported:
+			return
+
 		from lending.loan_management.doctype.loan_restructure.loan_restructure import (
 			create_update_loan_reschedule,
 		)
@@ -164,6 +174,10 @@ class LoanRepayment(LoanController):
 				)
 
 	def on_submit(self):
+		if self.is_imported:
+			self.update_paid_amounts()
+			return
+
 		from lending.loan_management.doctype.loan_demand.loan_demand import reverse_demands
 		from lending.loan_management.doctype.loan_disbursement.loan_disbursement import (
 			make_sales_invoice_for_charge,
@@ -373,6 +387,20 @@ class LoanRepayment(LoanController):
 		repost.cancel_future_accruals_and_demands = True
 		repost.cancel_future_emi_demands = True
 		repost.submit()
+
+	def check_import_total_amount(self):
+		precision = cint(frappe.db.get_default("currency_precision")) or 2
+
+		total_amount = flt(self.principal_amount_paid, precision) + flt(self.total_interest_paid, precision) + flt(
+			self.total_penalty_paid, precision
+		) + flt(self.total_charges_paid, precision) + flt(self.unbooked_interest_paid, precision) + flt(
+			self.unbooked_penalty_paid, precision
+		)
+
+		if flt(self.amount_paid, precision) != flt(total_amount, precision):
+			frappe.throw(
+				_("Amount Paid must equal the sum of Principal, Interest, Penalty, Charges, Unbooked Interest, and Unbooked Penalty.")
+			)
 
 	def post_suspense_entries(self, cancel=0):
 		from lending.loan_management.doctype.loan_write_off.loan_write_off import (
@@ -621,7 +649,7 @@ class LoanRepayment(LoanController):
 					amount=demand.paid_amount,
 					loan_repayment=self.name,
 					waiver_account=waiver_account,
-					posting_date=self.posting_date,
+					posting_date=getdate(self.posting_date),
 					value_date=self.value_date,
 				)
 
@@ -993,6 +1021,20 @@ class LoanRepayment(LoanController):
 
 		if flt(self.excess_amount) > 0:
 			query = query.set(loan.excess_amount_paid, loan.excess_amount_paid + self.excess_amount)
+
+		if self.is_imported:
+			if self.repayment_type == "Write Off Settlement":
+				if self.repayment_schedule_type != "Line of Credit":
+					query = query.set(loan.status, "Closed")
+					query = query.set(loan.closure_date, self.value_date)
+
+			elif self.repayment_type == "Full Settlement":
+				if self.repayment_schedule_type != "Line of Credit":
+					query = query.set(loan.status, "Settled")
+					query = query.set(loan.settlement_date, self.value_date)
+
+			query.run()
+			return
 
 		if self.repayment_type == "Write Off Settlement":
 			auto_write_off_amount = flt(
@@ -2643,6 +2685,7 @@ def process_amount_for_loan(
 ):
 	from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
 		calculate_accrual_amount_for_loans,
+		calculate_penal_interest_for_loans,
 	)
 
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
@@ -2687,7 +2730,7 @@ def process_amount_for_loan(
 		is_future_dated = False
 
 	if is_future_dated and not for_update:
-		amounts["unaccrued_interest"] = calculate_accrual_amount_for_loans(
+		amounts["unaccrued_interest"] = flt(calculate_accrual_amount_for_loans(
 			loan,
 			posting_date=(posting_date if payment_type == "Loan Closure" else add_days(posting_date, -1))
 			if not freeze_date
@@ -2695,9 +2738,19 @@ def process_amount_for_loan(
 			accrual_type="Regular",
 			is_future_accrual=1,
 			loan_disbursement=loan_disbursement,
+		), precision)
+
+		amounts["unbooked_penalty"] = calculate_penal_interest_for_loans(
+			loan,
+			posting_date=add_days(posting_date, -1)
+			if not freeze_date
+			else freeze_date,
+			accrual_type="Regular",
+			is_future_accrual=1,
+			loan_disbursement=loan_disbursement,
 		)
 
-	amounts["total_charges_payable"] = charges
+	amounts["total_charges_payable"] = flt(charges, precision)
 	amounts["pending_principal_amount"] = flt(pending_principal_amount, precision)
 	amounts["payable_principal_amount"] = flt(payable_principal_amount, precision)
 	amounts["interest_amount"] = flt(total_pending_interest, precision)
@@ -3039,23 +3092,32 @@ def get_unbooked_interest(loan, posting_date, loan_disbursement=None, last_deman
 
 	return unbooked_interest
 
+
 def get_partial_pre_paid_interest(loan, last_demand_date, loan_disbursement=None):
 	precision = cint(frappe.db.get_default("currency_precision")) or 2
-	filters = {
-		"loan": loan,
-		"docstatus": 1,
-		"demand_type": "EMI",
-		"demand_subtype": "Interest",
-		"is_partial_pre_paid_interest": 1,
-		"demand_date": (">=", last_demand_date),
-	}
+
+	LoanDemand = DocType("Loan Demand")
+
+	query = (
+		frappe.qb.from_(LoanDemand)
+		.select(fn.Sum(LoanDemand.paid_amount))
+		.where(
+			(LoanDemand.loan == loan)
+			& (LoanDemand.docstatus == 1)
+			& (LoanDemand.demand_type == "EMI")
+			& (LoanDemand.demand_subtype == "Interest")
+			& (LoanDemand.is_partial_pre_paid_interest == 1)
+			& (LoanDemand.demand_date >= last_demand_date)
+		)
+	)
 
 	if loan_disbursement:
-		filters["loan_disbursement"] = loan_disbursement
+		query = query.where(LoanDemand.loan_disbursement == loan_disbursement)
 
-	amount = frappe.db.get_value("Loan Demand", filters, [{"SUM": "paid_amount"}]) or 0
+	amount = query.run()[0][0] or 0
 
 	return flt(amount, precision)
+
 
 def get_accrued_interest(
 	loan, posting_date, interest_type="Normal Interest", last_demand_date=None, loan_disbursement=None
