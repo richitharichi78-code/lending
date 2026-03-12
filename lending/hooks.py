@@ -44,7 +44,7 @@ app_include_js = "lending.bundle.js"
 # fixtures
 fixtures = [
 	{"dt": "Role", "filters": [["role_name", "like", "Loan %"]]},
-	{"dt": "Workflow", "filters": [["name", "=", "Loan Application Workflow"]]},
+	{"dt": "Workflow", "filters": [["name", "in", ("Loan Application Workflow", "Loan Lead Workflow")]]},
 	{"dt": "Workflow State", "filters": [["name", "not in", ("Rejected", "Approved", "Pending")]]},
 	{
 		"dt": "Workflow Action Master",
@@ -283,3 +283,10 @@ update_gl_dict_with_app_based_fields = ["lending.overrides.gl_entry.update_value
 # auth_hooks = [
 # 	"lending.auth.validate"
 # ]
+
+workflow_methods = [
+	{
+		"name": "Convert to Loan Application",
+		"method": "lending.loan_origination.doctype.loan_lead.loan_lead.convert_to_loan_application"
+	}
+]
