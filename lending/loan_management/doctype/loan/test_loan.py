@@ -29,7 +29,10 @@ from lending.loan_management.doctype.loan_disbursement.loan_disbursement import 
 from lending.loan_management.doctype.loan_interest_accrual.loan_interest_accrual import (
 	days_in_year,
 )
-from lending.loan_management.doctype.loan_repayment.loan_repayment import calculate_amounts
+from lending.loan_management.doctype.loan_repayment.loan_repayment import (
+	calculate_amounts,
+	process_pending_credit_notes,
+)
 from lending.loan_management.doctype.loan_security_release.loan_security_release import (
 	get_pledged_security_qty,
 )
@@ -1954,6 +1957,8 @@ class TestLoan(IntegrationTestCase):
 			}
 		)
 		loan_adjustment.submit()
+
+		process_pending_credit_notes()
 
 		credit_notes = frappe.get_all(
 			"Sales Invoice",
