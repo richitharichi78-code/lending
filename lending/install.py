@@ -43,7 +43,7 @@ LOAN_CUSTOM_FIELDS = {
 			"fieldname": "loan_tab",
 			"fieldtype": "Tab Break",
 			"label": "Lending",
-			"insert_after": "default_in_transit_warehouse",
+			"insert_after": "default_scrap_warehouse",
 		},
 		{
 			"fieldname": "loan_settings",
@@ -55,7 +55,7 @@ LOAN_CUSTOM_FIELDS = {
 			"fieldname": "loan_restructure_limit",
 			"label": "Restructure Limit % (Overall)",
 			"fieldtype": "Percent",
-			"insert_after": "enable_loan_accounting",
+			"insert_after": "loan_settings",
 		},
 		{
 			"fieldname": "watch_period_post_loan_restructure_in_days",
