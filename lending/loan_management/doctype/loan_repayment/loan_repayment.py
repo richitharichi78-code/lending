@@ -64,7 +64,7 @@ class LoanRepayment(LoanController):
 		interest_payable: DF.Currency
 		is_backdated: DF.Check
 		is_imported: DF.Check
-		is_invoice_not_generated: DF.Check
+		is_invoice_generated: DF.Check
 		is_npa: DF.Check
 		is_term_loan: DF.Check
 		is_write_off_waiver: DF.Check
@@ -258,9 +258,6 @@ class LoanRepayment(LoanController):
 			self.book_interest_accrued_not_demanded()
 			if self.is_term_loan:
 				self.book_pending_principal()
-
-		if self.repayment_type == "Charges Waiver" and self.total_charges_paid > 0:
-			self.db_set("is_invoice_not_generated", 1)
 
 		self.update_paid_amounts()
 		self.handle_auto_demand_write_off()
@@ -3378,7 +3375,7 @@ def process_pending_credit_notes():
 		.where(
 			(LR.repayment_type == "Charges Waiver")
 			& (LR.docstatus == 1)
-			& (LR.is_invoice_not_generated == 1)
+			& (LR.is_invoice_generated == 0)
 		)
 		.orderby(LR.creation)
 		.limit(500)
@@ -3393,12 +3390,7 @@ def process_pending_credit_notes():
 			base_amount_map = repayment.make_credit_note_for_charge_waivers()
 			repayment.post_suspense_entries(base_amount_map=base_amount_map)
 
-			frappe.db.set_value(
-				"Loan Repayment",
-				name,
-				"is_invoice_not_generated",
-				0
-			)
+			frappe.db.set_value("Loan Repayment", name, "is_invoice_generated", 1, update_modified=False)
 
 		except Exception:
 			frappe.log_error(
