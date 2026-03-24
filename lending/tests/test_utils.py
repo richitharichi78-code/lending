@@ -544,12 +544,12 @@ def make_loan_disbursement_entry(
 	return loan_disbursement_entry
 
 
-def create_loan_security_price(loan_security, loan_security_price, uom, from_date, to_date):
+def create_loan_security_price(loan_security, loan_security_price, uom, from_date, to_date, update_if_existing=False):
 	if not frappe.db.get_value(
 		"Loan Security Price",
 		{"loan_security": loan_security, "valid_from": ("<=", from_date), "valid_upto": (">=", to_date)},
 		"name",
-	):
+	) or update_if_existing:
 
 		frappe.get_doc(
 			{
@@ -559,6 +559,7 @@ def create_loan_security_price(loan_security, loan_security_price, uom, from_dat
 				"uom": uom,
 				"valid_from": from_date,
 				"valid_upto": to_date,
+				"update_if_existing": update_if_existing,
 			}
 		).insert(ignore_permissions=True)
 
@@ -1061,3 +1062,37 @@ def loan_classification_ranges():
 			existing_codes.add(row.get("classification_code"))
 
 	doc.save(ignore_permissions=True)
+
+def create_loan_security_release(applicant, applicant_type, securities, loan=None):
+	loan_security_release = frappe.new_doc("Loan Security Release")
+	loan_security_release.applicant = applicant
+	loan_security_release.applicant_type = applicant_type
+	loan_security_release.loan = loan
+
+	for security in securities:
+		loan_security_release.append("securities", {
+			"loan_security": security.get("loan_security"),
+			"qty": security.get("qty")
+		})
+
+	loan_security_release.insert()
+	loan_security_release.submit()
+
+	loan_security_release.status = "Approved"
+	loan_security_release.save()
+
+	return loan_security_release
+
+def update_loan_security_price(loan_security, loan_security_price, uom, from_date, to_date):
+	loan_security_price_doc = frappe.db.get_value(
+		"Loan Security Price",
+		{"loan_security": loan_security, "valid_from": ("<=", from_date), "valid_upto": (">=", to_date)},
+		"name",
+	)
+
+	if loan_security_price_doc:
+		doc = frappe.get_doc("Loan Security Price", loan_security_price_doc)
+		doc.loan_security_price = loan_security_price
+		doc.save()
+	else:
+		create_loan_security_price(loan_security, loan_security_price, uom, from_date, to_date)
