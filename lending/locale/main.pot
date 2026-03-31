@@ -7,8 +7,8 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Lending VERSION\n"
 "Report-Msgid-Bugs-To: contact@frappe.io\n"
-"POT-Creation-Date: 2026-03-22 09:43+0000\n"
-"PO-Revision-Date: 2026-03-22 09:43+0000\n"
+"POT-Creation-Date: 2026-03-29 09:45+0000\n"
+"PO-Revision-Date: 2026-03-29 09:45+0000\n"
 "Last-Translator: contact@frappe.io\n"
 "Language-Team: contact@frappe.io\n"
 "MIME-Version: 1.0\n"
@@ -599,6 +599,12 @@ msgstr ""
 #: lending/loan_management/doctype/loan_refund/loan_refund.json
 #: lending/loan_management/doctype/loan_write_off/loan_write_off.json
 msgid "Applicant "
+msgstr ""
+
+#. Label of the applicant_borrower (Link) field in DocType 'Process Loan
+#. Security Shortfall'
+#: lending/loan_management/doctype/process_loan_security_shortfall/process_loan_security_shortfall.json
+msgid "Applicant (Borrower)"
 msgstr ""
 
 #. Label of the applicant_details_section (Section Break) field in DocType
@@ -2612,6 +2618,7 @@ msgstr ""
 #. Label of the loan (Link) field in DocType 'Loan Transfer Detail'
 #. Label of the loan (Link) field in DocType 'Loan Write Off'
 #. Label of the loan (Link) field in DocType 'Process Loan Demand'
+#. Label of the loan (Link) field in DocType 'Process Loan Security Shortfall'
 #. Label of a Card Break in the Lending Workspace
 #. Label of a Link in the Lending Workspace
 #. Label of a shortcut in the Lending Workspace
@@ -2638,6 +2645,7 @@ msgstr ""
 #: lending/loan_management/doctype/loan_transfer_detail/loan_transfer_detail.json
 #: lending/loan_management/doctype/loan_write_off/loan_write_off.json
 #: lending/loan_management/doctype/process_loan_demand/process_loan_demand.json
+#: lending/loan_management/doctype/process_loan_security_shortfall/process_loan_security_shortfall.json
 #: lending/loan_management/report/alm_audit_report/alm_audit_report.py:18
 #: lending/loan_management/report/future_cashflow_report/future_cashflow_report.js:41
 #: lending/loan_management/report/future_cashflow_report/future_cashflow_report.py:18
@@ -3529,7 +3537,7 @@ msgstr ""
 msgid "Loan Security Price"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_security_price/loan_security_price.py:50
+#: lending/loan_management/doctype/loan_security_price/loan_security_price.py:49
 msgid "Loan Security Price overlapping with {0}"
 msgstr ""
 
@@ -3605,8 +3613,10 @@ msgstr ""
 msgid "Loan To Security Value ratio must always be {0}"
 msgstr ""
 
+#. Label of the loan_to_value_ratio (Percent) field in DocType 'Loan Security'
 #. Label of the loan_to_value_ratio (Percent) field in DocType 'Loan Security
 #. Type'
+#: lending/loan_management/doctype/loan_security/loan_security.json
 #: lending/loan_management/doctype/loan_security_type/loan_security_type.json
 msgid "Loan To Value Ratio"
 msgstr ""
@@ -5534,8 +5544,10 @@ msgstr ""
 #. Label of the sanctioned_loan_amount (Currency) field in DocType 'Loan
 #. Disbursement'
 #. Name of a DocType
+#. Label of a Workspace Sidebar Item
 #: lending/loan_management/doctype/loan_disbursement/loan_disbursement.json
 #: lending/loan_management/doctype/sanctioned_loan_amount/sanctioned_loan_amount.json
+#: lending/workspace_sidebar/lending.json
 msgid "Sanctioned Loan Amount"
 msgstr ""
 
@@ -6175,7 +6187,7 @@ msgstr ""
 msgid "Valid From"
 msgstr ""
 
-#: lending/loan_management/doctype/loan_security_price/loan_security_price.py:34
+#: lending/loan_management/doctype/loan_security_price/loan_security_price.py:33
 msgid "Valid From Time must be lesser than Valid Upto Time."
 msgstr ""
 
