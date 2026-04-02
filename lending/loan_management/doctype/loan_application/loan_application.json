@@ -17,7 +17,6 @@
   "column_break_2",
   "company",
   "posting_date",
-  "status",
   "applicant_address_details_section",
   "address_line_1",
   "address_line_2",
@@ -29,6 +28,7 @@
   "co_applicants_section",
   "co_applicants",
   "section_break_4",
+  "status",
   "loan_product",
   "loan_amount",
   "rate_of_interest",
@@ -83,12 +83,11 @@
   },
   {
    "fieldname": "status",
-   "fieldtype": "Data",
+   "fieldtype": "Select",
    "label": "Status",
    "no_copy": 1,
    "options": "Open\nApproved\nRejected",
-   "permlevel": 1,
-   "read_only": 1
+   "permlevel": 1
   },
   {
    "fieldname": "company",
@@ -339,7 +338,7 @@
  "index_web_pages_for_search": 1,
  "is_submittable": 1,
  "links": [],
- "modified": "2026-02-23 16:47:00.869101",
+ "modified": "2026-04-02 16:03:38.065821",
  "modified_by": "Administrator",
  "module": "Loan Management",
  "name": "Loan Application",
