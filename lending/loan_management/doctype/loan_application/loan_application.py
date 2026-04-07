@@ -67,7 +67,7 @@ class LoanApplication(Document):
 		repayment_method: DF.Literal["", "Repay Fixed Amount per Period", "Repay Over Number of Periods"]
 		repayment_periods: DF.Int
 		state: DF.Data | None
-		status: DF.Data | None
+		status: DF.Literal["Open", "Approved", "Rejected"]
 		total_payable_amount: DF.Currency
 		total_payable_interest: DF.Currency
 		zip_code: DF.Int

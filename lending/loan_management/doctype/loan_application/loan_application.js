@@ -223,8 +223,7 @@ frappe.ui.form.on('Loan Application', {
 									};
 									if (customer.customer_primary_contact) {
 										frappe.db.get_doc("Contact", customer.customer_primary_contact).then((contact) => {
-											frm.set_value("first_name", customer.first_name);
-											frm.set_value("last_name", customer.last_name);
+											frm.set_value("applicant_name", contact.first_name);
 										});
 									}
 								});
