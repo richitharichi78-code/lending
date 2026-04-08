@@ -1720,7 +1720,6 @@ def get_dpd_threshold_write_off_map():
 	)
 
 
-
 def move_unpaid_interest_to_suspense_ledger(loan, posting_date=None, value_date=None):
 	from lending.loan_management.doctype.loan_repayment.loan_repayment import (
 		get_last_demand_date,
