@@ -567,25 +567,6 @@ def write_off_charges(
 			)
 
 
-def get_suspense_entries(loan, loan_product):
-	suspense_accounts = frappe.db.get_value(
-		"Loan Product", loan_product, ["suspense_interest_income", "penalty_suspense_account"]
-	)
-
-	journal_entries = frappe.db.get_all(
-		"Journal Entry Account",
-		filters={
-			"account": ("in", suspense_accounts),
-			"docstatus": 1,
-			"reference_type": "Loan",
-			"reference_name": loan,
-		},
-		pluck="parent",
-	)
-
-	return journal_entries
-
-
 def get_write_off_waivers_for_cancel(loan_name, posting_date):
 	return frappe.db.get_all(
 		"Loan Repayment",
