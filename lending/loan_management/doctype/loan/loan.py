@@ -557,14 +557,6 @@ class Loan(LoanController):
 				)
 			)
 
-	def submit_draft_schedule(self):
-		draft_schedule = frappe.db.get_value(
-			"Loan Repayment Schedule", {"loan": self.name, "docstatus": 0}, "name"
-		)
-		if draft_schedule:
-			schedule = frappe.get_doc("Loan Repayment Schedule", draft_schedule)
-			schedule.submit()
-
 	def cancel_and_delete_repayment_schedule(self):
 		schedules = frappe.db.get_all(
 			"Loan Repayment Schedule", {"loan": self.name, "docstatus": 1}, pluck="name"
@@ -627,20 +619,6 @@ class Loan(LoanController):
 				)
 
 				self.db_set("maximum_loan_amount", maximum_loan_value)
-
-	def unlink_loan_security_assignment(self):
-		pledges = frappe.get_all(
-			"Loan Security Assignment", fields=["name"], filters={"loan": self.name}
-		)
-		pledge_list = [d.name for d in pledges]
-		if pledge_list:
-			frappe.db.sql(
-				"""UPDATE `tabLoan Security Assignment` SET
-				loan = '', status = 'Unpledged'
-				where name in (%s) """
-				% (", ".join(["%s"] * len(pledge_list))),
-				tuple(pledge_list),
-			)  # nosec
 
 	def cancel_loan_security_assignment(self):
 		if not self.loan_application:
@@ -772,14 +750,6 @@ class Loan(LoanController):
 				}
 			)
 		)
-
-
-def update_total_amount_paid(doc):
-	total_amount_paid = 0
-	for data in doc.repayment_schedule:
-		if data.paid:
-			total_amount_paid += data.total_payment
-	frappe.db.set_value("Loan", doc.name, "total_amount_paid", total_amount_paid)
 
 
 def get_total_loan_amount(applicant_type, applicant, company):
@@ -1750,13 +1720,6 @@ def get_dpd_threshold_write_off_map():
 	)
 
 
-@redis_cache(ttl=60 * 60)
-def get_loan_partner_threshold_map():
-	return frappe._dict(
-		frappe.get_all("Loan Partner", fields=["name", "fldg_trigger_dpd"], as_list=1)
-	)
-
-
 def move_unpaid_interest_to_suspense_ledger(loan, posting_date=None, value_date=None):
 	from lending.loan_management.doctype.loan_repayment.loan_repayment import (
 		get_last_demand_date,
@@ -2063,92 +2026,6 @@ def make_journal_entry(
 	jv.submit()
 
 	return jv.name
-
-
-def get_unpaid_interest_amount(loan, posting_date, demand_subtype):
-	from lending.loan_management.doctype.loan_repayment.loan_repayment import get_unpaid_demands
-
-	posting_date = posting_date or getdate()
-	unpaid_demands = get_unpaid_demands(
-		loan, posting_date=posting_date, demand_subtype=demand_subtype
-	)
-
-	amount = 0
-	for demand in unpaid_demands:
-		amount += demand.outstanding_amount
-
-	return amount
-
-
-def make_fldg_invocation_jv(loan, posting_date):
-	from lending.loan_management.doctype.loan_repayment.loan_repayment import (
-		get_pending_principal_amount,
-	)
-
-	loan_partner = frappe.db.get_value("Loan", loan, "loan_partner")
-	partner_details = frappe.db.get_value(
-		"Loan Partner",
-		loan_partner,
-		[
-			"payable_account",
-			"fldg_account",
-			"partner_interest_share",
-			"fldg_limit_calculation_component",
-			"type_of_fldg_applicable",
-			"fldg_fixed_deposit_percentage",
-			"fldg_corporate_guarantee_percentage",
-		],
-		as_dict=1,
-	)
-
-	limit_amount = 0
-
-	if partner_details.fldg_limit_calculation_component == "Disbursement":
-		base_amount = frappe.db.get_value("Loan", loan, "disbursed_amount")
-	elif partner_details.fldg_limit_calculation_component == "POS":
-		base_amount = get_pending_principal_amount(loan)
-
-	if partner_details.type_of_fldg_applicable == "Fixed Deposit Only":
-		limit_amount += base_amount * partner_details.fldg_fixed_deposit_percentage / 100
-	elif partner_details.type_of_fldg_applicable == "Corporate Guarantee Only":
-		limit_amount += base_amount * partner_details.fldg_corporate_guarantee_percentage / 100
-	elif partner_details.type_of_fldg_applicable == "Both Fixed Deposit and Corporate Guarantee":
-		limit_amount += base_amount * partner_details.fldg_fixed_deposit_percentage / 100
-		limit_amount += base_amount * partner_details.fldg_corporate_guarantee_percentage / 100
-
-	if not partner_details.payable_account:
-		frappe.throw(_("Please add partner Payable Account for Loan Partner {0}").format(loan_partner))
-
-	if not partner_details.fldg_account:
-		frappe.throw(_("Please add partner FLGD Account for Loan Partner {0}").format(loan_partner))
-
-	if limit_amount:
-		journal_entry = frappe.new_doc("Journal Entry")
-		journal_entry.posting_date = posting_date
-
-		journal_entry.append(
-			"accounts",
-			{
-				"account": partner_details.payable_account,
-				"credit_in_account_currency": limit_amount,
-				"credit": limit_amount,
-				"reference_type": "Loan",
-				"reference_name": loan,
-			},
-		)
-
-		journal_entry.append(
-			"accounts",
-			{
-				"account": partner_details.fldg_account,
-				"debit_in_account_currency": limit_amount,
-				"debit": limit_amount,
-				"reference_type": "Loan",
-				"reference_name": loan,
-			},
-		)
-
-		journal_entry.submit()
 
 
 @frappe.whitelist()

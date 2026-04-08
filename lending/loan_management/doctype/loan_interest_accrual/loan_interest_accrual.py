@@ -578,16 +578,6 @@ def get_principal_amount_for_term_loan(repayment_schedule, date):
 	return principal_amount
 
 
-def get_term_loan_payment_date(loan_repayment_schedule, date):
-	payment_date = frappe.db.get_value(
-		"Repayment Schedule",
-		{"parent": loan_repayment_schedule, "payment_date": ("<=", date)},
-		"MAX(payment_date)",
-	)
-
-	return payment_date
-
-
 def calculate_penal_interest_for_loans(
 	loan,
 	posting_date,
