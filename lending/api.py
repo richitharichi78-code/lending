@@ -3,7 +3,7 @@
 import json
 
 import frappe
-from frappe import _grb4
+from frappe import _
 from frappe.utils import flt, getdate
 
 from lending.loan_management.doctype.process_loan_security_shortfall.process_loan_security_shortfall import (
