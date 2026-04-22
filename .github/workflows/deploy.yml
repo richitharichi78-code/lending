@@ -1,0 +1,14 @@
+name: Auto Deploy
+
+on:
+  push:
+    branches:
+      - main
+
+jobs:
+  deploy:
+    runs-on: self-hosted
+    steps:
+      - name: Pull latest code
+        run: |
+          docker exec devcontainer-frappe-1 bash -c "cd /workspace/development/frappe-bench/apps/lending && git pull origin main && cd /workspace/development/frappe-bench && bench restart"
