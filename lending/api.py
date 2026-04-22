@@ -9,7 +9,7 @@ from frappe.utils import flt, getdate
 from lending.loan_management.doctype.process_loan_security_shortfall.process_loan_security_shortfall import (
 	create_process_loan_security_shortfall,
 )
-#test test test test retest retest
+#test test test test retest retest  testetetet
 
 @frappe.whitelist()
 def get_repayment_schedule(loan_product: str, loan_amount: float, rate_of_interest: float, tenure: int, repayment_frequency: str | None, repayment_start_date: str | None = None) -> list[dict]:
@@ -22,7 +22,7 @@ def get_repayment_schedule(loan_product: str, loan_amount: float, rate_of_intere
 	repayment_schedule.repayment_frequency = repayment_frequency or "Monthly"
 	repayment_schedule.repayment_method = "Repay Over Number of Periods"
 	repayment_schedule.repayment_periods = tenure
-	repayment_schedule.rate_of_interest = rate_of_interest
+	repayment_schedule.rate_of_interest = rate_of_interest`c`
 	repayment_schedule.posting_date = getdate()
 	repayment_schedule.repayment_start_date = getdate(repayment_start_date)
 	repayment_schedule.loan_amount = loan_amount
